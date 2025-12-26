@@ -14,6 +14,9 @@ export type BylineResult =
 const COURSE_ID_REGEX = /^[a-z0-9-]{3,20}$/
 const BYLINE_REGEX = /^[a-zA-Z0-9\s'-]{1,30}$/
 
+// Hardwired fallback trainer ID - always works as backup entry
+const FALLBACK_TRAINER_ID = 'trainer'
+
 export async function validateCourseId(input: string): Promise<AuthResult> {
   const trimmed = input.trim()
   
@@ -57,6 +60,24 @@ export async function validateCourseId(input: string): Promise<AuthResult> {
           success: true, 
           courseId: guestData.course_id, 
           role: 'guest_editor' 
+        }
+      }
+      
+      // Try fallback trainer ID - grants trainer access to most recent newslab
+      if (trimmed === FALLBACK_TRAINER_ID) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('newslabs')
+          .select('course_id')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        
+        if (fallbackData && !fallbackError) {
+          return { 
+            success: true, 
+            courseId: fallbackData.course_id, 
+            role: 'trainer' 
+          }
         }
       }
       

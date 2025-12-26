@@ -6,6 +6,7 @@ export interface UploadResult {
   width: number
   height: number
   publicId: string
+  error?: string
 }
 
 export async function uploadImage(file: File): Promise<UploadResult> {
@@ -14,22 +15,27 @@ export async function uploadImage(file: File): Promise<UploadResult> {
   formData.append('upload_preset', UPLOAD_PRESET)
   formData.append('folder', 'newslab/images')
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-    { method: 'POST', body: formData }
-  )
+  try {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      { method: 'POST', body: formData }
+    )
 
-  if (!response.ok) {
-    throw new Error('Failed to upload image')
-  }
+    if (!response.ok) {
+      return { url: '', width: 0, height: 0, publicId: '', error: 'Failed to upload image' }
+    }
 
-  const data = await response.json()
-  
-  return {
-    url: data.secure_url,
-    width: data.width,
-    height: data.height,
-    publicId: data.public_id
+    const data = await response.json()
+    
+    return {
+      url: data.secure_url,
+      width: data.width,
+      height: data.height,
+      publicId: data.public_id
+    }
+  } catch (err) {
+    console.error('Upload error:', err)
+    return { url: '', width: 0, height: 0, publicId: '', error: 'Upload failed' }
   }
 }
 

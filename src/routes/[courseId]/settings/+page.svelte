@@ -1,12 +1,17 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { session, showNotification, teamColors } from '$lib/stores'
+  import { session, showNotification, teamColors, isTrainer, isGuestEditor } from '$lib/stores'
   import { supabase } from '$lib/supabase'
   import type { Team, Journalist } from '$lib/types'
   import ColorPalette from '$components/ColorPalette.svelte'
   import TeamMemberItem from '$components/TeamMemberItem.svelte'
   import TeamLogoUpload from '$components/TeamLogoUpload.svelte'
   import ShareToggle from '$components/ShareToggle.svelte'
+  import TeamsTab from '$components/TeamsTab.svelte'
+  import AdminTab from '$components/AdminTab.svelte'
+
+  type TabType = 'settings' | 'teams' | 'admin'
+  let activeTab: TabType = 'settings'
 
   // Byline state
   let bylineName = ''
@@ -41,6 +46,8 @@
   $: currentUserName = $session?.name || ''
   $: currentTeamName = $session?.teamName || null
   $: primaryColor = team?.primary_color || '5422b0'
+  $: showTeamsTab = $isTrainer || $isGuestEditor
+  $: showAdminTab = $isTrainer
 
   onMount(async () => {
     bylineName = $session?.name || ''
@@ -176,12 +183,15 @@
     if (!bylineValid || bylineSaving || bylineName === originalBylineName) return
 
     bylineSaving = true
+    const newName = bylineName.trim()
+    const oldName = originalBylineName
 
+    // Update journalist record
     const { error } = await supabase
       .from('journalists')
-      .update({ name: bylineName.trim(), updated_at: new Date().toISOString() })
+      .update({ name: newName, updated_at: new Date().toISOString() })
       .eq('course_id', courseId)
-      .eq('name', originalBylineName)
+      .eq('name', oldName)
 
     if (error) {
       showNotification('error', 'Failed to save. Try again.')
@@ -189,12 +199,23 @@
       return
     }
 
+    // Update author_name in all stories by this journalist
+    const { error: storiesError } = await supabase
+      .from('stories')
+      .update({ author_name: newName, updated_at: new Date().toISOString() })
+      .eq('course_id', courseId)
+      .eq('author_name', oldName)
+
+    if (storiesError) {
+      console.error('Failed to update stories author_name:', storiesError)
+    }
+
     session.set({
       ...$session!,
-      name: bylineName.trim()
+      name: newName
     })
 
-    originalBylineName = bylineName.trim()
+    originalBylineName = newName
     bylineEditing = false
     bylineSaving = false
     showNotification('success', 'Saved')
@@ -525,44 +546,186 @@
 
 <div class="min-h-screen bg-white flex flex-col pb-[60px]">
   <main class="flex-1 px-4 py-4">
-    <!-- Page Title -->
-    <h1 class="text-xl font-semibold text-[#333] mb-1">Settings</h1>
-    <div class="w-full h-[1px] bg-[#efefef] mb-6"></div>
+    <!-- Tab Navigation -->
+    <div class="flex items-center gap-6 mb-6">
+      <button
+        type="button"
+        on:click={() => activeTab = 'settings'}
+        class="text-xl font-semibold transition-colors pb-1 border-b-2"
+        class:text-[#5422b0]={activeTab === 'settings'}
+        class:border-[#5422b0]={activeTab === 'settings'}
+        class:text-[#777777]={activeTab !== 'settings'}
+        class:border-transparent={activeTab !== 'settings'}
+      >
+        Settings
+      </button>
+      
+      {#if showTeamsTab}
+        <button
+          type="button"
+          on:click={() => activeTab = 'teams'}
+          class="text-xl font-semibold transition-colors pb-1 border-b-2"
+          class:text-[#5422b0]={activeTab === 'teams'}
+          class:border-[#5422b0]={activeTab === 'teams'}
+          class:text-[#777777]={activeTab !== 'teams'}
+          class:border-transparent={activeTab !== 'teams'}
+        >
+          Teams
+        </button>
+      {/if}
+      
+      {#if showAdminTab}
+        <button
+          type="button"
+          on:click={() => activeTab = 'admin'}
+          class="text-xl font-semibold transition-colors pb-1 border-b-2"
+          class:text-[#5422b0]={activeTab === 'admin'}
+          class:border-[#5422b0]={activeTab === 'admin'}
+          class:text-[#777777]={activeTab !== 'admin'}
+          class:border-transparent={activeTab !== 'admin'}
+        >
+          Admin
+        </button>
+      {/if}
+    </div>
 
-    <div class="space-y-6">
-      <!-- Byline Section -->
-      <div>
-        <label for="byline-input" class="block text-sm text-[#777777] mb-2">Byline</label>
-        <div class="flex items-center gap-2">
-          <div class="flex-1 relative">
-            <input
-              id="byline-input"
-              type="text"
-              value={bylineName}
-              on:input={handleBylineInput}
-              on:focus={startBylineEdit}
-              maxlength="30"
-              class="w-full bg-[#efefef] rounded-lg px-4 py-3 text-base outline-none transition-all"
-              class:ring-2={bylineEditing}
-              class:ring-[#5422b0]={bylineEditing}
-              style={bylineEditing ? `--tw-ring-color: #${primaryColor}` : ''}
-            />
-          </div>
-          
-          {#if bylineValidating}
-            <div class="w-5 h-5 border-2 border-[#777777] border-t-transparent rounded-full animate-spin"></div>
-          {:else if bylineEditing}
-            {#if bylineValid && bylineName !== originalBylineName}
+    <!-- Settings Tab Content -->
+    {#if activeTab === 'settings'}
+      <div class="space-y-6">
+        <!-- Byline Section -->
+        <div>
+          <label for="byline-input" class="block text-sm text-[#777777] mb-2">Byline</label>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 relative">
+              <input
+                id="byline-input"
+                type="text"
+                value={bylineName}
+                on:input={handleBylineInput}
+                on:focus={startBylineEdit}
+                maxlength="30"
+                class="w-full bg-[#efefef] rounded-lg px-4 py-3 text-base outline-none transition-all"
+                class:ring-2={bylineEditing}
+                class:ring-[#5422b0]={bylineEditing}
+                style={bylineEditing ? `--tw-ring-color: #${primaryColor}` : ''}
+              />
+            </div>
+            
+            {#if bylineValidating}
+              <div class="w-5 h-5 border-2 border-[#777777] border-t-transparent rounded-full animate-spin"></div>
+            {:else if bylineEditing}
+              {#if bylineValid && bylineName !== originalBylineName}
+                <img
+                  src="/icons/icon-check.svg"
+                  alt="Available"
+                  class="w-5 h-5"
+                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+                />
+              {:else if !bylineValid}
+                <img
+                  src="/icons/icon-close-circle-fill.svg"
+                  alt="Not available"
+                  class="w-5 h-5"
+                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+                />
+              {:else}
+                <img
+                  src="/icons/icon-circle.svg"
+                  alt=""
+                  class="w-5 h-5"
+                  style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
+                />
+              {/if}
+            {:else}
               <img
                 src="/icons/icon-check.svg"
-                alt="Available"
+                alt="Verified"
                 class="w-5 h-5"
                 style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
               />
-            {:else if !bylineValid}
+            {/if}
+          </div>
+
+          {#if bylineError}
+            <p class="text-sm text-[#777777] mt-1">{bylineError}</p>
+          {/if}
+
+          <div class="flex items-center justify-between mt-1">
+            <span class="text-xs text-[#999999]">{bylineName.length} / 30</span>
+            
+            {#if bylineEditing}
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  on:click={cancelBylineEdit}
+                  class="p-1"
+                  aria-label="Cancel"
+                >
+                  <img
+                    src="/icons/icon-close-circle-fill.svg"
+                    alt=""
+                    class="w-6 h-6"
+                    style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+                  />
+                </button>
+                <button
+                  type="button"
+                  on:click={saveByline}
+                  disabled={!bylineValid || bylineName === originalBylineName || bylineSaving}
+                  class="px-4 py-1 rounded-full text-white text-sm font-medium transition-opacity"
+                  class:opacity-50={!bylineValid || bylineName === originalBylineName || bylineSaving}
+                  style="background-color: #{primaryColor};"
+                >
+                  {bylineSaving ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            {/if}
+          </div>
+        </div>
+
+        <!-- Team Name Section -->
+        <div>
+          <label for="team-name-input" class="block text-sm text-[#777777] mb-2">Team Name</label>
+          <div class="flex items-center gap-2">
+            <div class="flex-1 relative">
+              <input
+                id="team-name-input"
+                type="text"
+                value={teamNameInput}
+                on:input={handleTeamInput}
+                on:focus={startTeamEdit}
+                maxlength="30"
+                placeholder={currentTeamName ? '' : 'Enter team name...'}
+                disabled={!!currentTeamName && !currentUserIsEditor}
+                class="w-full bg-[#efefef] rounded-lg px-4 py-3 text-base outline-none transition-all"
+                class:ring-2={teamEditing}
+                class:ring-[#5422b0]={teamEditing}
+                class:text-[#777777]={!teamNameInput && !currentTeamName}
+                class:cursor-not-allowed={!!currentTeamName && !currentUserIsEditor}
+                style={teamEditing ? `--tw-ring-color: #${primaryColor}` : ''}
+              />
+            </div>
+
+            {#if teamValidating}
+              <div class="w-5 h-5 border-2 border-[#777777] border-t-transparent rounded-full animate-spin"></div>
+            {:else if currentTeamName && !teamEditing}
+              <img
+                src="/icons/icon-check.svg"
+                alt="In team"
+                class="w-5 h-5"
+                style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+              />
+            {:else if teamEditing && teamValid}
+              <img
+                src="/icons/icon-check.svg"
+                alt="Valid"
+                class="w-5 h-5"
+                style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+              />
+            {:else if teamEditing && teamValid === false}
               <img
                 src="/icons/icon-close-circle-fill.svg"
-                alt="Not available"
+                alt="Invalid"
                 class="w-5 h-5"
                 style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
               />
@@ -574,243 +737,153 @@
                 style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
               />
             {/if}
-          {:else}
-            <img
-              src="/icons/icon-check.svg"
-              alt="Verified"
-              class="w-5 h-5"
-              style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-            />
-          {/if}
-        </div>
-
-        {#if bylineError}
-          <p class="text-sm text-[#777777] mt-1">{bylineError}</p>
-        {/if}
-
-        <div class="flex items-center justify-between mt-1">
-          <span class="text-xs text-[#999999]">{bylineName.length} / 30</span>
-          
-          {#if bylineEditing}
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                on:click={cancelBylineEdit}
-                class="p-1"
-                aria-label="Cancel"
-              >
-                <img
-                  src="/icons/icon-close-circle-fill.svg"
-                  alt=""
-                  class="w-6 h-6"
-                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-                />
-              </button>
-              <button
-                type="button"
-                on:click={saveByline}
-                disabled={!bylineValid || bylineName === originalBylineName || bylineSaving}
-                class="px-4 py-1 rounded-full text-white text-sm font-medium transition-opacity"
-                class:opacity-50={!bylineValid || bylineName === originalBylineName || bylineSaving}
-                style="background-color: #{primaryColor};"
-              >
-                {bylineSaving ? 'Saving...' : 'Save'}
-              </button>
-            </div>
-          {/if}
-        </div>
-      </div>
-
-      <!-- Team Name Section -->
-      <div>
-        <label for="team-name-input" class="block text-sm text-[#777777] mb-2">Team Name</label>
-        <div class="flex items-center gap-2">
-          <div class="flex-1 relative">
-            <input
-              id="team-name-input"
-              type="text"
-              value={teamNameInput}
-              on:input={handleTeamInput}
-              on:focus={startTeamEdit}
-              maxlength="30"
-              placeholder={currentTeamName ? '' : 'Enter team name...'}
-              disabled={!!currentTeamName && !currentUserIsEditor}
-              class="w-full bg-[#efefef] rounded-lg px-4 py-3 text-base outline-none transition-all"
-              class:ring-2={teamEditing}
-              class:ring-[#5422b0]={teamEditing}
-              class:text-[#777777]={!teamNameInput && !currentTeamName}
-              class:cursor-not-allowed={!!currentTeamName && !currentUserIsEditor}
-              style={teamEditing ? `--tw-ring-color: #${primaryColor}` : ''}
-            />
           </div>
 
-          {#if teamValidating}
-            <div class="w-5 h-5 border-2 border-[#777777] border-t-transparent rounded-full animate-spin"></div>
-          {:else if currentTeamName && !teamEditing}
-            <img
-              src="/icons/icon-check.svg"
-              alt="In team"
-              class="w-5 h-5"
-              style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-            />
-          {:else if teamEditing && teamValid}
-            <img
-              src="/icons/icon-check.svg"
-              alt="Valid"
-              class="w-5 h-5"
-              style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-            />
-          {:else if teamEditing && teamValid === false}
-            <img
-              src="/icons/icon-close-circle-fill.svg"
-              alt="Invalid"
-              class="w-5 h-5"
-              style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-            />
-          {:else}
-            <img
-              src="/icons/icon-circle.svg"
-              alt=""
-              class="w-5 h-5"
-              style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
-            />
+          {#if teamError}
+            <p class="text-sm text-[#777777] mt-1">{teamError}</p>
           {/if}
-        </div>
 
-        {#if teamError}
-          <p class="text-sm text-[#777777] mt-1">{teamError}</p>
-        {/if}
-
-        <div class="flex items-center justify-between mt-1">
-          <span class="text-xs text-[#999999]">{teamNameInput.length} / 30</span>
-          
-          {#if teamEditing && !currentTeamName}
-            <div class="flex items-center gap-2">
-              <button
-                type="button"
-                on:click={cancelTeamEdit}
-                class="p-1"
-                aria-label="Cancel"
-              >
-                <img
-                  src="/icons/icon-close-circle-fill.svg"
-                  alt=""
-                  class="w-6 h-6"
-                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-                />
-              </button>
-              <button
-                type="button"
-                on:click={saveTeamName}
-                disabled={teamValid !== true || !teamNameInput.trim() || teamSaving}
-                class="px-4 py-1 rounded-full text-white text-sm font-medium transition-opacity"
-                class:opacity-50={teamValid !== true || !teamNameInput.trim() || teamSaving}
-                style="background-color: #{primaryColor};"
-              >
-                {teamSaving ? 'Saving...' : teamExists ? 'Join' : 'Save'}
-              </button>
-            </div>
-          {/if}
-        </div>
-      </div>
-
-      <!-- Team Members Section -->
-      {#if currentTeamName}
-        <div>
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-sm text-[#777777]">Team members</span>
-            <span class="text-sm text-[#777777]">Editor</span>
-          </div>
-
-          {#if teamMembers.length > 0}
-            <div class="border-t border-[#efefef]">
-              {#each teamMembers as member (member.id)}
-                <TeamMemberItem
-                  name={member.name}
-                  isEditor={member.is_editor}
-                  isCurrentUser={member.name === currentUserName}
-                  canRemove={currentUserIsEditor || member.name === currentUserName}
-                  canToggleEditor={currentUserIsEditor}
-                  isSelected={selectedMemberForRemoval === member.name}
-                  {primaryColor}
-                  on:remove={() => selectMemberForRemoval(member.name)}
-                  on:toggleEditor={handleToggleEditor}
-                />
-              {/each}
-            </div>
-
-            <!-- Remove confirmation toolbar -->
-            {#if selectedMemberForRemoval}
-              <div 
-                class="flex items-center justify-center gap-3 mt-3 py-2 px-4 rounded-full text-white"
-                style="background-color: #{primaryColor};"
-              >
+          <div class="flex items-center justify-between mt-1">
+            <span class="text-xs text-[#999999]">{teamNameInput.length} / 30</span>
+            
+            {#if teamEditing && !currentTeamName}
+              <div class="flex items-center gap-2">
                 <button
                   type="button"
-                  on:click={cancelRemoveMember}
-                  class="w-6 h-6 rounded-full border border-white flex items-center justify-center"
+                  on:click={cancelTeamEdit}
+                  class="p-1"
                   aria-label="Cancel"
                 >
                   <img
-                    src="/icons/icon-close.svg"
+                    src="/icons/icon-close-circle-fill.svg"
                     alt=""
-                    class="w-3 h-3"
-                    style="filter: invert(100%);"
+                    class="w-6 h-6"
+                    style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
                   />
                 </button>
-                <span class="text-sm font-medium">
-                  {selectedMemberForRemoval === currentUserName ? 'Leave the team?' : 'Remove from team?'}
-                </span>
                 <button
                   type="button"
-                  on:click={confirmRemoveMember}
-                  class="w-6 h-6 rounded-full border border-white flex items-center justify-center"
-                  aria-label="Confirm"
+                  on:click={saveTeamName}
+                  disabled={teamValid !== true || !teamNameInput.trim() || teamSaving}
+                  class="px-4 py-1 rounded-full text-white text-sm font-medium transition-opacity"
+                  class:opacity-50={teamValid !== true || !teamNameInput.trim() || teamSaving}
+                  style="background-color: #{primaryColor};"
                 >
-                  <img
-                    src="/icons/icon-check.svg"
-                    alt=""
-                    class="w-3 h-3"
-                    style="filter: invert(100%);"
-                  />
+                  {teamSaving ? 'Saving...' : teamExists ? 'Join' : 'Save'}
                 </button>
               </div>
             {/if}
-          {:else}
-            <p class="text-[#999999] text-sm py-3">Team members will appear here</p>
-          {/if}
+          </div>
         </div>
 
-        <!-- Color Palette -->
-        <ColorPalette
-          selectedColor={team?.primary_color || '5422b0'}
-          disabled={!currentUserIsEditor}
-          on:select={handleColorSelect}
-        />
+        <!-- Team Members Section -->
+        {#if currentTeamName}
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-[#777777]">Team members</span>
+              <span class="text-sm text-[#777777]">Editor</span>
+            </div>
 
-        <!-- Logo Upload -->
-        <TeamLogoUpload
-          logoUrl={team?.logo_url || null}
-          disabled={!currentUserIsEditor}
-          {primaryColor}
-          on:upload={handleLogoUpload}
-          on:remove={handleLogoRemove}
-        />
+            {#if teamMembers.length > 0}
+              <div class="border-t border-[#efefef]">
+                {#each teamMembers as member (member.id)}
+                  <TeamMemberItem
+                    name={member.name}
+                    isEditor={member.is_editor}
+                    isCurrentUser={member.name === currentUserName}
+                    canRemove={currentUserIsEditor || member.name === currentUserName}
+                    canToggleEditor={currentUserIsEditor}
+                    isSelected={selectedMemberForRemoval === member.name}
+                    {primaryColor}
+                    on:remove={() => selectMemberForRemoval(member.name)}
+                    on:toggleEditor={handleToggleEditor}
+                  />
+                {/each}
+              </div>
 
-        <!-- Share Toggle -->
-        <ShareToggle
-          enabled={team?.share_enabled || false}
-          teamName={currentTeamName}
-          disabled={!currentUserIsEditor}
-          {primaryColor}
-          on:toggle={handleShareToggle}
-        />
-      {:else}
-        <div>
-          <span class="text-sm text-[#777777]">Team members</span>
-          <p class="text-[#999999] text-sm mt-2">Team members will appear here</p>
-        </div>
-      {/if}
-    </div>
+              <!-- Remove confirmation toolbar -->
+              {#if selectedMemberForRemoval}
+                <div 
+                  class="flex items-center justify-center gap-3 mt-3 py-2 px-4 rounded-full text-white"
+                  style="background-color: #{primaryColor};"
+                >
+                  <button
+                    type="button"
+                    on:click={cancelRemoveMember}
+                    class="w-6 h-6 rounded-full border border-white flex items-center justify-center"
+                    aria-label="Cancel"
+                  >
+                    <img
+                      src="/icons/icon-close.svg"
+                      alt=""
+                      class="w-3 h-3"
+                      style="filter: invert(100%);"
+                    />
+                  </button>
+                  <span class="text-sm font-medium">
+                    {selectedMemberForRemoval === currentUserName ? 'Leave the team?' : 'Remove from team?'}
+                  </span>
+                  <button
+                    type="button"
+                    on:click={confirmRemoveMember}
+                    class="w-6 h-6 rounded-full border border-white flex items-center justify-center"
+                    aria-label="Confirm"
+                  >
+                    <img
+                      src="/icons/icon-check.svg"
+                      alt=""
+                      class="w-3 h-3"
+                      style="filter: invert(100%);"
+                    />
+                  </button>
+                </div>
+              {/if}
+            {:else}
+              <p class="text-[#999999] text-sm py-3">Team members will appear here</p>
+            {/if}
+          </div>
+
+          <!-- Color Palette -->
+          <ColorPalette
+            selectedColor={team?.primary_color || '5422b0'}
+            disabled={!currentUserIsEditor}
+            on:select={handleColorSelect}
+          />
+
+          <!-- Logo Upload -->
+          <TeamLogoUpload
+            logoUrl={team?.logo_url || null}
+            disabled={!currentUserIsEditor}
+            {primaryColor}
+            on:upload={handleLogoUpload}
+            on:remove={handleLogoRemove}
+          />
+
+          <!-- Share Toggle -->
+          <ShareToggle
+            enabled={team?.share_enabled || false}
+            teamName={currentTeamName}
+            disabled={!currentUserIsEditor}
+            {primaryColor}
+            on:toggle={handleShareToggle}
+          />
+        {:else}
+          <div>
+            <span class="text-sm text-[#777777]">Team members</span>
+            <p class="text-[#999999] text-sm mt-2">Team members will appear here</p>
+          </div>
+        {/if}
+      </div>
+    {/if}
+
+    <!-- Teams Tab Content -->
+    {#if activeTab === 'teams' && showTeamsTab}
+      <TeamsTab {courseId} />
+    {/if}
+
+    <!-- Admin Tab Content -->
+    {#if activeTab === 'admin' && showAdminTab}
+      <AdminTab {courseId} />
+    {/if}
   </main>
 </div>
