@@ -649,7 +649,7 @@ The Pin**
 	- A maximum of THREE pinned stories can appear at the top of the Team Stream, added by editors only. Pinned stories appear with the most recently pinned stories at the top of the Team Stream. If, for example, three pinned stories exist on the Team Stream, and another story is pinned, the pin is automatically removed from the oldest pinned story. This unpinned story now appears in normal date order within the Team Stream.
 	- Editors/Trainer/Guest Editor can toggle pins on and off using the button in the Team Stream toolbar.
 
-Preview**
+Story viewer**
 - tapping a story in the team stream launches a drawer from the bottom of the page with the individual story displayed. See team5.png
 - The top of the page displays the team theme colour, logo and team name
 - The format is as Draft preview: Byline to top left, under which is the headline then content.
@@ -771,7 +771,7 @@ Teams Tab**
 - Tapping a story launches a secondary drawer from left to right with individual stories. The left arrow (icon-arrow-left.svg #777777 on a #efefef circle background to top left slides the drawer closed, returning to the Team Stream).
 - Using the Teams tab, the trainer can both monitor and edit all stories, and also give feedback to the whole course group using projection.
 
-** Admin Tab**
+ Admin Tab**
 - This page is only visible by the Trainer - no-one else including guest editor 
 - The trainer admin tab contains core app functions, which the trainer would not wish to be seen while presenting. Therefore the functions are given a separate tab. See trainer4.png. 
 The tab comprises:**

@@ -100,7 +100,7 @@ CREATE UNIQUE INDEX idx_teams_share_token ON teams(public_share_token) WHERE pub
 ```
 
 **Constraints:**
-- `team_name`: Max 50 characters, unique per course
+- `team_name`: Max 30 characters, unique per course
 - `primary_color` / `secondary_color`: Hex format (#RRGGBB)
 - `public_share_token`: UUID, generated on team creation, can be regenerated
 - `share_enabled`: Only editors can toggle; affects `/share/[team-name]` route access

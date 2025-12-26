@@ -54,8 +54,57 @@ export const writeDrawerOpen = writable(false)
 export const storyReaderDrawerOpen = writable(false)
 export const previewDrawerOpen = writable(false)
 
-// Current story being viewed in StoryReaderDrawer (for later phases)
-export const currentViewingStory = writable<{ id: string; title: string } | null>(null)
+// Current story being viewed in StoryReaderDrawer
+export const currentViewingStory = writable<{ id: string; title: string; story: import('./types').Story } | null>(null)
+
+// Current story being edited in WriteDrawer
+export interface EditingStory {
+  id?: string
+  title: string
+  summary: string
+  featuredImageUrl: string | null
+  featuredImageCaption: string
+  content: import('./types').ContentBlock[]
+  teamName: string
+  status: 'draft' | 'published'
+  isDirty: boolean
+  lastSaved: number | null
+}
+
+const emptyStory: EditingStory = {
+  title: '',
+  summary: '',
+  featuredImageUrl: null,
+  featuredImageCaption: '',
+  content: [],
+  teamName: '',
+  status: 'draft',
+  isDirty: false,
+  lastSaved: null
+}
+
+function createEditingStoryStore() {
+  const { subscribe, set, update } = writable<EditingStory>({ ...emptyStory })
+  
+  return {
+    subscribe,
+    set,
+    update,
+    reset: () => set({ ...emptyStory }),
+    loadStory: (story: Partial<EditingStory> & { teamName: string }) => {
+      set({
+        ...emptyStory,
+        ...story,
+        isDirty: false,
+        lastSaved: Date.now()
+      })
+    },
+    markDirty: () => update(s => ({ ...s, isDirty: true })),
+    markSaved: () => update(s => ({ ...s, isDirty: false, lastSaved: Date.now() }))
+  }
+}
+
+export const editingStory = createEditingStoryStore()
 
 // Team color store - derives from session's team or uses default
 export const teamColors = writable<{ primary: string; secondary: string }>({
