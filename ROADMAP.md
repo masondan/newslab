@@ -25,17 +25,18 @@ NewsLab is a mobile-first, collaborative CMS for journalism training. This roadm
 
 ---
 
-## Phase 0: Environment & Schema Setup
+## Phase 0: Environment & Schema Setup ✅ COMPLETE
 
 **Duration:** 1-2 days  
+**Status:** Complete  
 **Deliverables:**
-- [ ] Svelte + Vite project initialized, Tailwind CSS configured
-- [ ] Supabase project created, client SDK installed
+- [x] SvelteKit project initialized with Tailwind CSS
+- [x] Supabase project created, client SDK installed
 - [ ] Cloudinary account configured with unsigned upload preset
 - [ ] GitHub repo linked to Cloudflare Pages (auto-deploy on push)
 - [ ] Database schema created and deployed to Supabase
-- [ ] Environment variables configured (`.env.local`)
-- [ ] TypeScript strict mode enabled
+- [x] Environment variables configured (`.env.local`)
+- [x] TypeScript strict mode enabled
 - [ ] SVG icons copied to `/static` (see icon list below)
 
 **Database Schema Changes:**
@@ -126,10 +127,14 @@ CREATE INDEX idx_activity_course ON activity_log(course_id);
 
 **Environment Variables:**
 ```
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_CLOUDINARY_CLOUD_NAME=your-cloud-name
-VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
+# .env.local (for local development)
+PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+PUBLIC_CLOUDINARY_CLOUD_NAME=your-cloud-name
+PUBLIC_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
+
+# Access in code via:
+# import { PUBLIC_SUPABASE_URL } from '$env/static/public'
 ```
 
 **Required SVG Icons** (place in `/static/icons/`):
@@ -146,8 +151,9 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 - `icon-select-all.svg`, `icon-select-all-fill.svg` (select all inactive/active)
 - `icon-radio.svg` (selected radio button)
 - `icon-circle.svg` (unselected radio button)
-- `icon-check.svg` (green checkmark for validation)
-- `icon-close.svg`, `icon-close-circle.svg` (close/remove button)
+- `icon-check.svg`, `icon-check-fill.svg` (checkmark for validation, outline/filled)
+- `icon-close.svg`, `icon-close-circle.svg`, `icon-close-circle-fill.svg` (close/remove button, outline/filled)
+- `icon-login-fill.svg` (arrow/enter button for splash form submission)
 - `icon-image.svg`, `icon-heading.svg`, `icon-bold.svg`, `icon-list.svg` (text editing)
 - `icon-separator.svg` (horizontal rule)
 - `icon-youtube.svg`, `icon-link.svg` (embeds)
@@ -158,7 +164,9 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 - `icon-expand.svg`, `icon-collapse.svg` (expand/collapse dropdown)
 - `icon-upload.svg` (upload button)
 - `icon-custom-upload.svg` (custom image upload)
-- `newslab-textlogo-white.png` (main logo for splash)
+- `icon-toggle-on.svg`, `icon-toggle-off.svg` (toggle switch on/off states)
+- `icon-copy.svg` (copy URL button)
+- `logo-textlogo-white.png` (main logo for splash)
 
 **Acceptance Criteria:**
 - [ ] Database schema deployed to Supabase without errors
@@ -169,66 +177,86 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 
 ---
 
-## Phase 1: Identity & Gatekeeper
+## Phase 1: Identity & Gatekeeper (Splash Screen) ✅ COMPLETE
 
-**Duration:** 2-3 days  
 **Dependencies:** Phase 0  
+**Status:** Complete  
 **Deliverables:**
-- [ ] Splash screen with Course ID input (See DESIGN.md, splash1.png, splash2.png)
-- [ ] Course ID validation (check newslabs table)
-- [ ] Trainer password detection (separate from Course ID)
-- [ ] Guest Editor ID detection (separate password)
-- [ ] Personal name entry & validation (check journalists table)
-- [ ] localStorage persistence: `{ courseId, name, role, teamName }`
-- [ ] Role detection: 'journalist', 'trainer', 'guest_editor'
-- [ ] Route guards for protected pages
-- [ ] Logout functionality (clear localStorage)
+- [x] Splash screen with two-input flow (Course/Role ID + Byline name)
+- [x] Course/Role ID validation: Check if input matches `course_id`, `trainer_id`, or `guest_editor_id` in newslabs table
+- [x] Role detection: Determine 'journalist', 'trainer', or 'guest_editor' based on which field matched
+- [x] Byline name validation: Check journalists table for uniqueness per course
+- [x] Real-time validation feedback: Check/X icons for each field
+- [x] Auto-create journalist record (first-time login only)
+- [x] Flash message on successful login: "Welcome [byline]"
+- [x] localStorage persistence: `{ courseId, name, role, teamName, sessionToken, loginTimestamp }`
+- [x] Same-device return: Skip splash if valid session in localStorage
+- [x] Different-device return: Full re-authentication (splash required)
+- [x] Route guards for protected pages (via SvelteKit layouts)
+- [x] Logout functionality (clear localStorage)
 
-**Routes to Create:**
-- `GET /` — Splash screen (entry point)
-- `GET /[course-id]/home` — Redirect target (after login)
-- `GET /[course-id]/*` — Protected routes (require valid localStorage)
+**SvelteKit Routes (Implemented):**
+- `src/routes/+page.svelte` — Splash screen (entry point at `/`)
+- `src/routes/[courseId]/home/+page.svelte` — Home page (redirect target)
+- `src/routes/[courseId]/+layout.svelte` — Protected route guard (redirects to `/` if not logged in)
 
-**Components to Build:**
-- `SplashScreen.svelte` — Course ID input, trainer password detection
-- `NameValidation.svelte` — Name input with real-time validation feedback
-- `GatekeeperGuard.svelte` — Route protection logic
+**Implementation Notes:**
+- Splash screen is now `src/routes/+page.svelte` (not a separate component)
+- Route protection handled by `src/routes/[courseId]/+layout.svelte` (not GatekeeperGuard.svelte)
+- Session validation in `src/routes/+layout.svelte` on mount
+- Auth functions with discriminated unions in `src/lib/auth.ts`
 
 **Supabase Queries:**
-- Validate Course ID exists: `SELECT id FROM newslabs WHERE course_id = $1`
-- Check name availability: `SELECT id FROM journalists WHERE course_id = $1 AND name = $2`
-- Auto-create journalist record on first login
+- Validate Course ID: `SELECT id, trainer_id, guest_editor_id FROM newslabs WHERE course_id = $1 OR trainer_id = $1 OR guest_editor_id = $1`
+- Check byline availability: `SELECT * FROM journalists WHERE course_id = $1 AND name = $2`
+- Auto-create journalist (first-time): `INSERT INTO journalists (course_id, name, is_editor, team_name) VALUES ($1, $2, false, null)`
 
 **localStorage Schema:**
 ```javascript
 {
-  courseId: "nigeria-0126",
-  name: "Zainab",
-  role: "journalist|trainer|guest_editor",
-  teamName: null,  // Populated after team join
-  session_token: "uuid"  // For validation
+  courseId: "nigeria-0126",                    // From splash Step 1
+  name: "Zainab",                              // From splash Step 2
+  role: "journalist|trainer|guest_editor",    // Auto-detected from courseId match
+  teamName: null,                              // Populated after Settings/team join
+  sessionToken: "uuid"                         // Client-side session ID
 }
 ```
 
+**Validation Rules:**
+- Course/Role ID: Alphanumeric, 3-20 characters. Must exist in newslabs table.
+- Byline name: Max 30 characters. Must be unique per course (case-sensitive).
+- On error: Show inline message + red X icon (icon-close-circle-fill.svg)
+- On success: Show green check icon (icon-check-fill.svg) and advance to next step
+
 **Design References:**
-- Splash screen: See splash1.png, splash2.png (DESIGN.md section "1 Splash screen")
-- Name validation: Part of Settings flow (DESIGN.md section "5. Settings")
+- Splash initial state: splash1.png (DESIGN.md section "1 Splash screen")
+- After Course ID validation: splash2.png (check icon, byline input appears)
+- After byline entry: splash3.png (both fields validated, ready to submit)
+- Error state: DESIGN.md text descriptions ("Try again", "Name taken. Try again")
 
 **Acceptance Criteria:**
-- [ ] Invalid Course ID shows error message
-- [ ] Valid Course ID advances to name validation
-- [ ] Duplicate name shows red X; available name shows green ✓
-- [ ] Trainer ID detected; role set to 'trainer' in localStorage
-- [ ] Guest Editor ID detected; role set to 'guest_editor'
-- [ ] Page refresh: user stays logged in (localStorage persists)
-- [ ] Logout button clears all localStorage
-- [ ] All routes require valid `courseId` + `name` in localStorage
+- [ ] Invalid Course/Role ID shows error "Try again" + red X icon
+- [ ] Valid Course/Role ID shows green check icon + byline input appears
+- [ ] Byline field accepts max 30 characters
+- [ ] Duplicate byline name shows error "Name taken. Try again" + red X icon
+- [ ] Available byline name shows green check icon
+- [ ] Arrow button (icon-login-fill.svg) submits form
+- [ ] Enter/Return key also submits form
+- [ ] Successful login shows "Welcome [name]" flash message
+- [ ] Successful login redirects to `/[courseId]/home`
+- [ ] Trainer ID detected → role set to 'trainer' in localStorage
+- [ ] Guest Editor ID detected → role set to 'guest_editor' in localStorage
+- [ ] Journalist Course ID detected → role set to 'journalist' in localStorage
+- [ ] Page refresh (same device): session in localStorage valid → skip splash, go to home
+- [ ] Page refresh (different device): no localStorage → show splash again
+- [ ] Returning user with same byline: System recognizes them + redirects to home with all content
+- [ ] Logout button clears all localStorage + redirects to splash
+- [ ] All protected routes (home, stream, settings) require valid `courseId` + `name` + `role` in localStorage
 
 ---
 
 ## Phase 2: Core Navigation & Drawer System
 
-**Duration:** 2-3 days  
 **Dependencies:** Phase 1  
 **Deliverables:**
 - [ ] Footer navigation tabs (User Home, Write, Team Stream, Settings)
@@ -239,18 +267,18 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 - [ ] Responsive mobile layout (no desktop optimizations yet)
 - [ ] Tab switching without data loss (maintain scroll position)
 
-**Routes:**
-- `GET /[course-id]/home` — User Home (default, Drafts/Published tabs)
-- `GET /[course-id]/stream` — Team Stream
-- `GET /[course-id]/settings` — Settings
-- Modals/Drawers handled by Svelte state (not routes)
+**SvelteKit Routes:**
+- `src/routes/[courseId]/home/+page.svelte` — User Home (Drafts/Published tabs)
+- `src/routes/[courseId]/stream/+page.svelte` — Team Stream
+- `src/routes/[courseId]/settings/+page.svelte` — Settings
+- Drawers handled by Svelte stores (not routes)
 
 **Components to Build:**
-- `FooterNav.svelte` — 4-button footer, active state tracking
-- `WriteDrawer.svelte` — Full-screen modal (initially empty, content in Phase 4)
-- `StoryReaderDrawer.svelte` — Full-screen modal for story detail
-- `PreviewDrawer.svelte` — Preview modal (left-to-right slide)
-- `MainLayout.svelte` — Wrapper with footer, tab content, drawer management
+- `src/components/FooterNav.svelte` — 4-button footer, active state tracking
+- `src/components/WriteDrawer.svelte` — Full-screen modal (initially empty, content in Phase 4)
+- `src/components/StoryReaderDrawer.svelte` — Full-screen modal for story detail
+- `src/components/PreviewDrawer.svelte` — Preview modal (left-to-right slide)
+- Footer integrated into `src/routes/[courseId]/+layout.svelte`
 
 **State Management:**
 - Use Svelte stores for drawer visibility, active tab, scroll position
@@ -275,13 +303,16 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 
 ## Phase 3: Settings & Team Management
 
-**Duration:** 3-4 days  
 **Dependencies:** Phase 2  
 **Deliverables:**
-- [ ] Settings page: Personal name (read-only), Team Name input
+- [ ] Settings page: Byline name (auto-populated, editable with Save button), Team Name input
+- [ ] Byline name validation (real-time, check journalists table for uniqueness)
+- [ ] Byline Save button: Updates database, shows "Saved" confirmation
+- [ ] Byline change: Journalist must remember new name for next device login
 - [ ] Team name validation (real-time, check teams table)
 - [ ] Team Members list (all journalists in current team)
 - [ ] Leave team button (X next to own name)
+- [ ] Story handling on team leave: All published stories revert to Drafts
 - [ ] Editor status checkbox (next to each team member's name)
 - [ ] Team logo upload (Cloudinary, square, max 1 per team)
 - [ ] Team color selector (6 color circles, see DESIGN.md)
@@ -290,18 +321,18 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 - [ ] Real-time updates: When new member joins, Team Members list updates via Realtime subscription
 - [ ] Editor promotion logic: Only existing editors can toggle editor status
 - [ ] Team name editing: Only editors can change team name
+- [ ] Republish stories to new team: When journalist joins new team, can republish reverted stories
 
-**Routes:**
-- `GET /[course-id]/settings` — Settings page
+**SvelteKit Routes:**
+- `src/routes/[courseId]/settings/+page.svelte` — Settings page
 
 **Components to Build:**
-- `SettingsPage.svelte` — Main settings container
-- `PersonalSettings.svelte` — Name display (read-only)
-- `TeamSettings.svelte` — Team name input, member list, color picker
-- `TeamMemberItem.svelte` — Member name + remove button + editor checkbox
-- `TeamLogoUpload.svelte` — Image upload with preview
-- `ColorPalette.svelte` — 6 color circles with selection indicator
-- `ShareToggle.svelte` — Public URL toggle + copy button (editors only)
+- `src/components/PersonalSettings.svelte` — Name display (read-only)
+- `src/components/TeamSettings.svelte` — Team name input, member list, color picker
+- `src/components/TeamMemberItem.svelte` — Member name + remove button + editor checkbox
+- `src/components/TeamLogoUpload.svelte` — Image upload with preview
+- `src/components/ColorPalette.svelte` — 6 color circles with selection indicator
+- `src/components/ShareToggle.svelte` — Public URL toggle + copy button (editors only)
 
 **Supabase Queries:**
 - Get team members: `SELECT * FROM journalists WHERE course_id = $1 AND team_name = $2 ORDER BY created_at`
@@ -328,15 +359,24 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 - Public share toggle: Will be added to DESIGN by user (coordinate with visuals)
 
 **Acceptance Criteria:**
+- [ ] Byline field shows auto-populated name (from splash login) with check icon
+- [ ] Byline field is editable: Click/tap to enter edit mode (purple border, Save/Cancel buttons appear)
+- [ ] Byline validation: New name must be unique per course; taken name shows red X + error message
+- [ ] Byline Save button saves to database + shows "✓ Saved" feedback (1-2 second fade)
+- [ ] Byline Cancel button exits edit mode without saving changes
+- [ ] If journalist changes byline, they must remember new name for next device login
 - [ ] Team name field populated if user in a team, empty if not
 - [ ] Real-time validation: New team name shows green ✓, taken name shows red X
 - [ ] Team Members list shows all members (including self)
-- [ ] "X" next to own name triggers "Leave team?" confirmation
+- [ ] "X" next to own name triggers "Remove from team?" confirmation
+- [ ] Leaving team: All published stories for that team revert to Drafts (visible in Home/Drafts tab)
 - [ ] Leaving team removes journalist from database, redirects to empty settings
+- [ ] Drafts tab shows stories reverted from team (journalist can re-publish to new team later)
 - [ ] Last member leaves: Team deleted from database
 - [ ] Editor checkbox visible next to each member's name
 - [ ] Non-editors: Cannot toggle editor status (checkbox disabled/hidden)
 - [ ] Only editors can change team name (field disabled for non-editors)
+- [ ] Journalist joins new team: Can republish reverted stories to new team
 - [ ] Color selector shows 6 circles; selected color has ring indicator
 - [ ] Color change updates app theme in real-time (buttons, icons, active states)
 - [ ] Logo upload shows preview, accepts square images only
@@ -347,7 +387,6 @@ VITE_CLOUDINARY_UPLOAD_PRESET=your-unsigned-preset
 
 ## Phase 4: Story Editor & Auto-save (Write Drawer)
 
-**Duration:** 4-5 days  
 **Dependencies:** Phase 3  
 **Deliverables:**
 - [ ] Write drawer opens from bottom, full screen (See write1.png)
@@ -449,7 +488,6 @@ editor.addEventListener('input', debouncedSave)
 
 ## Phase 5: Publishing & Team Stream Display
 
-**Duration:** 3-4 days  
 **Dependencies:** Phase 4  
 **Deliverables:**
 - [ ] Publish button in Write drawer (becomes active when headline filled)
@@ -473,21 +511,20 @@ editor.addEventListener('input', debouncedSave)
 - [ ] Real-time updates via Supabase Realtime subscription
 - [ ] Activity log entries created for publish/unpublish/delete/pin/unpin
 
-**Routes:**
-- `GET /[course-id]/home` — User Home (update with Drafts/Published tabs)
-- `GET /[course-id]/stream` — Team Stream (update with pinned stories + stories)
+**SvelteKit Routes:**
+- `src/routes/[courseId]/home/+page.svelte` — User Home (Drafts/Published tabs)
+- `src/routes/[courseId]/stream/+page.svelte` — Team Stream (pinned + stories)
 
 **Components to Build:**
-- `PublishToolbar.svelte` — Pin toggle + confirmation (See write6.png, write7.png)
-- `UserHome.svelte` — Container for Drafts/Published tabs
-- `DraftsTab.svelte` — List of personal draft stories
-- `PublishedTab.svelte` — List of personal published stories
-- `TeamStream.svelte` — List of team's published stories (pinned + unpinned)
-- `StoryCard.svelte` — Thumbnail + metadata preview (See user8.png, team1.png)
-- `ThreeDotsMenu.svelte` — Context menu (Export/Edit/Delete for drafts; Unpublish/Export/Edit/Pin/Delete for published)
-- `StoryDetailDrawer.svelte` — Full-screen story view (See team2.png)
-- `SelectAllToggle.svelte` — Multi-select mode for bulk delete (See user7.png)
-- `TeamHeader.svelte` — Team name + logo + color (appears at top of Team Stream, See team1.png)
+- `src/components/PublishToolbar.svelte` — Pin toggle + confirmation
+- `src/components/DraftsTab.svelte` — List of personal draft stories
+- `src/components/PublishedTab.svelte` — List of personal published stories
+- `src/components/TeamStream.svelte` — List of team's published stories (pinned + unpinned)
+- `src/components/StoryCard.svelte` — Thumbnail + metadata preview
+- `src/components/ThreeDotsMenu.svelte` — Context menu
+- `src/components/StoryDetailDrawer.svelte` — Full-screen story view
+- `src/components/SelectAllToggle.svelte` — Multi-select mode for bulk delete
+- `src/components/TeamHeader.svelte` — Team name + logo + color
 
 **Supabase Queries:**
 - Get drafts: `SELECT * FROM stories WHERE course_id = $1 AND author_name = $2 AND status = 'draft' ORDER BY updated_at DESC`
@@ -566,7 +603,6 @@ Create entry for: published, unpublished, edited, pinned, unpinned, deleted
 
 ## Phase 6: Story Editing, Locking & Concurrency
 
-**Duration:** 3 days  
 **Dependencies:** Phase 5  
 **Deliverables:**
 - [ ] Edit button loads story in Write drawer (pre-filled data)
@@ -639,7 +675,6 @@ $$ LANGUAGE plpgsql;
 
 ## Phase 7: Trainer Dashboard, Admin Panel & Guest Editors
 
-**Duration:** 4-5 days  
 **Dependencies:** Phase 6  
 **Deliverables:**
 - [ ] Trainer login detection (separate Trainer ID password)
@@ -665,9 +700,9 @@ $$ LANGUAGE plpgsql;
 - [ ] Edit team settings from trainer Teams tab (change color, upload logo, team name, manage editors)
 - [ ] Trainer/Guest Editor can toggle team member editor status
 
-**Routes:**
-- `GET /[course-id]/settings` — Update with Teams + Admin tabs (conditional display)
-- Drawers: Team Stream preview, Story detail
+**SvelteKit Routes:**
+- `src/routes/[courseId]/settings/+page.svelte` — Settings with Teams + Admin tabs (conditional display)
+- Drawers handled by Svelte stores
 
 **Components to Build:**
 - Update `SettingsPage.svelte` to add Teams + Admin tabs
@@ -765,9 +800,9 @@ $$ LANGUAGE plpgsql;
 - [ ] E2E tests (Playwright or Cypress): Full journalist flow, trainer admin, offline sync
 - [ ] Documentation: README with setup + deployment instructions
 
-**Routes:**
-- `GET /share/[team-name]` — Public Team Stream (no auth)
-- All existing routes remain protected
+**SvelteKit Routes:**
+- `src/routes/share/[teamName]/+page.svelte` — Public Team Stream (no auth required)
+- All `[courseId]/*` routes remain protected via layout guards
 
 **Components to Build:**
 - `ExportButton.svelte` — Dropdown with export format options

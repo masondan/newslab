@@ -56,13 +56,24 @@ The mobile-first NewsLab web app consists of the following pages, tabs and drawe
 ### 1 Splash screen
 
 
-- Visuals splash1.png
+- Visuals splash1.png, splash2.png, splash3.png
 - Icons/logos: newslab-textlogo-white.png
 
-- The splash page has a solid #5422b0 background with white NewsLab png logo
-- An input window (#efefef background) is blank, waiting for journalists to input their ID provided by the trainer (eg Nigeria-0126). This gives the journalist full access to the app for the duration of the training.
-- The input window is also where the Trainer and (if present) a Guest Editor inputs their ID to gain access to the app.
-- Centered above the input window are the words: Enter your key (See splash1.png)
+- The splash page has a solid #5422b0 background with white newslab logo (logo-textlogo-white.png)
+- An input window (#efefef background) carries the placeholder text [Enter your key] Text color: #777777. This is the course ID provided by the Trainer (eg Nigeria-0126). See splash1.png
+- When a journalist taps the input window, a fine #efefef ‘active’ border appears around the input box and an ‘enter’ button appears to the right of the input screen (icon-login-fill.svg color: #5422b0)
+- The journalist adds the course ID and taps the ‘enter’ button.
+	- If the ID is WRONG, the circle cross icon (icon-close-circle-fill.svg color: 5422b0 ) is displayed with the message: [Try again]
+	- If the ID is correct, a check icon is displayed (icon-check-fill.svg Color: #5422b0), the fine white border disappears (the check remains) and a second input window appears below with the placeholder text [Enter your byline]
+- When a journalist taps the byline input window, a fine #efefef ‘active’ border appears around the input box and an ‘enter’ button appears to the right of the input screen (icon-login-fill.svg color: #5422b0)
+- The journalist adds their byline name and taps the ‘enter’ button. See splash3.png.
+	- If the name is already taken, the circle cross icon (icon-close-circle-fill.svg color: 5422b0 ) is displayed with the message: [Name taken. Choose another]
+	- If the name is available, a check icon is displayed (icon-check-fill.svg Color: #5422b0), the fine white border disappears (the check remains) and the app redirects to the user Home page (default Drafts tab)
+
+**User re-entry**
+- If the journalists closes the app then re-opens the app on the same device, if the user ID and name are in local memory, the app will open at the default user home / draft tab. No splash page or ID/byline input required
+- If the user opens the app on a new device, the splash page appears and they will be required to add ID / byline to gain entry. 
+- The journalist should be able to use concurrent devices to create/edit stories
 
 
 ### 2 User Home
@@ -73,8 +84,8 @@ The mobile-first NewsLab web app consists of the following pages, tabs and drawe
 - Icons/logos: icon-user.svg, icon-user-fill.svg,  icon-group.svg, icon-group-fill.svg, icon-newstory.svg, icon-settings.svg, icon-settings-fill.svg
 
 **The page has two tabs: Drafts and Published (Active purple 5422b0 + underline, inactive #777777)**
-    - At first the Draft tab is empty and displays a #777777 notification: Nothing here yet. / Create a story.
-    - At first the Draft tab is empty and displays a #777777 notification: Nothing here yet. / Publish a story.
+    - At first the Draft tab is empty and displays a #777777 notification: Nothing to show. / First, create or join a team in Settings. Then start writing.
+    - At first the Draft tab is empty and displays a #777777 notification: Nothing to show. / Published stories appear here and in your Team Stream.
 
 
 **Footer menu**
@@ -229,46 +240,84 @@ Icons: icon-check.svg, icon-circle.svg, icon-upload.svg, icon-close-circle.svg, 
 
 - Accessed via the settings icon in the footer. Active #5422b0, inactive #777777
 - Journalists see only one settings page
-- Initial view of the Settings page: settings1.png
+
+- Initial view of the Settings page (with byline name automatically added): settings1.png
 
 **Settings page elements** 
 
 From the top down …
 
-**Byline input window** 
-	- To the right of an #efefef input window is a #777777 circle (icon-circle.svg). 
-	- A journalist inputs their name. If the name is taken, an x icon is displayed (icon-close-circle.svg #5422b0) and a message: Name taken. Try again. See settings2.png
-    - If the input name (max 30 characters) is available, a purple check becomes active and the journalist moves on the team name.
+**Byline input window - name added** 
+	- See settings1.png
+	- The journalist was required to submit a byline name on the splash screen
+	- The byline name will automatically appear in the settings
+	- The byline input field is an #efefef window. To the right - if the name is registered in the database - is a purple #5422b0 check icon (icon-check.svg)
+	- The journalist would normally not need to touch this name unless they want to change it.
+
+**Byline input window - change name** 
+	- See settings2.png, settings3.png
+	- If they wish, the journalist can change their byline name.
+	- To do this, they tap in the byline name input box. 
+		- A fine purple active border appears around the input box
+		- The check icon (icon-check-fill.svg) to the right is transformed into the circle icon (icon-circle.svg color: #777777)
+		- A Save (text. Pill button with #5422b0 background) and Cancel (icon-close-circle.svg) button appear under the input field to the left.
+	- The journalist inputs a new name (max 30 characters). 
+		- IF NOT available, the icon to the right changes to an x (icon-close-circle.png) and a message appears: [Name taken. Try again] See settings3.png
+		- If available the circle to the right becomes the icon-check.svg, default #5422b0 checkbox again)
+	- The journalist then confirms by tapping the Save button (or cancelling with the cancel button)
 
 **Team name input window.** 
-
-	- To the right of an #efefef input window is a #777777 circle (icon-circle.svg). 
-	- In the as yet empty Team Members section below there is placeholder text that says [Team members will appear here]. This disappears when team member names are added.
-	- In training, teams will be asked to elect an initial editor who will input the agreed team name first, before others move beyond the Byline stage. If the name is not available, the icon-close-circle.svg is displayed and the journalist tried again
-	- If the team name is available, the purple check becomes active and the name of the initial editor is displayed below.
-	- When a team has been created, other team members now enter the name of the team in the input window. If found in the database, the active check will be displayed and their names appear in the list of team members below. See settings3.png
+	- See settings4.png
+	- To the right of the Team Name #efefef input window is a #777777 circle (icon-circle.svg).  As in settings3.png
+	- In training, teams will be asked to elect a team member who will input the agreed team name first. This members becomes an editor by default.
+	- The journalist taps the Team Name input window. The flow is almost the same as for the Byline Name change process.
+	- On tapping the window, a fine purple active border appears around the input box
+	- A Save (text button. Pill with #5422b0 background) and Cancel (icon-close-circle.svg) buttons appear under the input field to the left.
+	- The journalist inputs a Team name (max 30 characters). 
+		- IF NOT available, the icon to the right changes to an x (icon-close-circle.png) and a message appears: [Name taken. Try again]
+		- If available the circle to the right becomes the icon-check.svg, default #5422b0)
+	- The journalist then confirms by tapping the Save button (or cancelling with the cancel button)
+	- the name of the journalist is then added to the list of members below with the Editor selector applied by default. This means the Team always has one editor at the start (it can be changed later).
+	- When a team has been created, other team members now enter the name of the team in the input window. If found in the database, the active check will be displayed in their settings and their names appear in the list of team members below. See settings3.png
 
 **Team members**
+	- See settings5.png
+	- The Team Members section below the Team Name input is empty at first. There is placeholder text that says [Team members will appear here]. This disappears when team member names are added.
+	- The journalist who added the team name automatically becomes an editor.
+	- Names of other team members appear in a list automatically, with fine separators as team members are added. All team members can see each other’s names in their app settings. 
 
-	- Names of team members appear in a list automatically, with fine separators. All team members can see each other’s names in their app settings. 
-	- To the left of each name is an x close icon (icon-close.svg). This is to remove members from the team.
-	- Only editors/trainer/guest editors can remove members from the team. To remove a member, tap the x next to the name. The name and x are highlighted with #5422b0 and a toolbar below the list of members is displayed in #5422b0. This has a confirmation [Leave the team?] with check (yes) and cancel (no) buttons (icon-check.svg, icon-close-circle.svg). See settings3.png
 
 **Editors**
-
+	- See settings6.png
 	- The person who first creates the team AUTOMATICALLY is made an Editor. The Editor checkbox (icon-check.svg #5422b0) is then active by default (but can be changed later)
 	- Teams can have one or more editors. Only editors can create or remove other editors.
 	- Once created, ONLY editors can amend the team name. This should be blocked for non-editors
 	- Only Editors can select the team colour, upload the team logo, activate the team stream sharing toggle. These functions should be blocked for non-editors. 
-	- There must always be at least one editor per team.
+	- There must always be at least one editor per team. If an editor who is the last in the team tries to remove their editor status by unchecking the button to the right of their name, a message modal appears to say [Teams must have at least one editor. Add another then try again] with a [Got it] confirmation button to close the modal.
 	- Closing a Team. To close a team, members leave (or are removed) until only a final editor is left. When that editor leaves the team, the team is closed and the team name is removed.
+
+**Removing a team member**
+	- settings7.png
+	- To the left of each name is an x close icon (icon-close.svg). This is to remove members from the team.
+	- Only editors/trainer/guest editors can remove members from the team. 
+	- To remove a member, editors/trainer/guest editors tap the x next to the name. The name and x are highlighted with #5422b0 and a toolbar below the list of members is displayed in #5422b0. 
+	- This toolbar has a confirmation [Remove from team?] with check (yes) and cancel (no) buttons (icon-check.svg, icon-close-circle.svg).
+	- Tapping ‘Remove from team?’ Removes the person from that team. Their name disappears under the Team Name and the Team Name input box becomes blank.
+
+**Content of removed members**
+	- Journalists must belong to a team to Publish stories. They can create Drafts, but cannot Publish (why? Because where would they publish to?).
+	- A journalist may have been part of a team and published stories. What happens to these stories?
+	- If a journalist who has created content leaves a team, all stories published by the journalist are moved back to Drafts. They no longer appear in Published or in the Team Stream. 
+	- When the journalist joins a different team, they republish all their stories. (In reality not too onerous - journalists will probably create 5-10 stories during a course)
 
 
 **team themes**
-
-    - There are six team colour selectors, displayed in a row of circular colour buttons. Selected buttons have a circle around them in the selected colour. See settings3.png
+	- See settings7.png
+    - There are six team colour selectors, displayed in a row of circular colour buttons. Selected buttons have a circle around them in the selected colour. 
 	- The standard #777777 text title with underscore says ’Pick a team theme*’ (with asterisk). Aligned to the same line is ‘*Editors only’
-	- The colour is a team choice, but only an editor can activate the colour. Each colour is a pair, with darker primary colour which takes the place of the default purple in page hovers, toolbars, active icons etc. The primary colour is paired with a secondary lighter colour, used in the team stream hero header. The palette is as follows:
+	- The colour is a team choice, but only an editor can activate the colour. 
+	- Tapping a theme colour immediately changes the colour around the app.
+	- Each colour is a pair, with darker primary colour which takes the place of the default purple in page hovers, toolbars, active icons etc. The primary colour is paired with a secondary lighter colour, used in the team stream hero header. The palette is as follows:
 
 "Indigo Bloom":"5422b0","Lavender Veil":"f0e6f7" (Default)
 "Stormy Teal":"057373","Honeydew":"d6ebdd"
@@ -278,7 +327,7 @@ From the top down …
 "Brick Ember":"d60202","Cotton Rose":"ffd6d6"
 
 **Logo upload**
-
+	- See settings7.png
     - The logo text says: [Upload a team logo (square)*]. See settings4.png
 	- Logos must be square. Only editors can upload a team logo. 
 	- There is a dotted square #777777 below the title with an upload button icon-upload.svg
@@ -287,9 +336,9 @@ From the top down …
 
 
 **Team stream share URL**
-
-	- After a team is created and editor(s) assigned, a public URL can be generated to share the team’s ‘website’ (team stream).
-	- By default the settings display a small header [share team stream*] with full width fine underscore. Aligned left is a toggle button switch OFF by default. See settings5.png
+	- see settings8.png
+	- After a team is created, a public URL can be generated (ONLY by an editor/the trainer/guest editor) to share the team’s ‘website’ (team stream).
+	- By default the setting displays a small header [share team stream*] with full width fine underscore. Aligned right is a toggle button switch OFF by default.
 	- Note: Create the toggle using CSS to achieve a smooth animated effect. However, if this proves difficult, toggle box svgs are added to static/icons: icon-toggle-on.svg and icon-toggle-off.svg.
 	- When an editor toggles the URL generator ON, a URL is displayed in a pale grey #efefef box beneath the title and toggle box. A copy button sits inside the box aligned right. Icon-copy.svg. See settings6.png
 	- When the URL toggle is on (active colour #5422b0) and the URL generated, it can be copied by any member of the team.

@@ -240,62 +240,301 @@ CREATE INDEX idx_activity_created ON activity_log(created_at DESC);
 ```javascript
 // localStorage key: 'newslab_session'
 {
-  courseId: "nigeria-0126",           // From splash screen
-  name: "Zainab",                     // Unique per course
+  courseId: "nigeria-0126",           // From splash screen (Course ID, Trainer ID, or Guest Editor ID)
+  name: "Zainab",                     // Byline name (entered on splash, unique per course)
   role: "journalist|trainer|guest_editor",
-  teamName: "Team Lagos",             // Populated after settings
+  teamName: "Team Lagos",             // Populated after Settings (null initially)
   sessionToken: "uuid",               // Client-side session ID
   loginTimestamp: 1703001600000       // UTC milliseconds
 }
 ```
 
-### Login Flow
+### Splash Screen Login Flow (All Roles)
 
-**Journalist:**
-1. User enters `courseId` on splash
-2. Query: Verify `courseId` exists in `newslabs`
-3. User enters personal name
-4. Query: Verify name unique in `journalists` table for this course
-5. Create journalist record: `INSERT INTO journalists (course_id, name, is_editor=false, team_name=NULL)`
-6. Store session in localStorage
-7. Redirect to `/[courseId]/home`
+**Unified two-step entry process for journalists, trainers, and guest editors:**
 
-**Trainer:**
-1. User enters `courseId` + `trainerPassword` on splash
-2. Query: Verify `newslabs.trainer_id = trainerPassword`
-3. Detect role = 'trainer'
-4. Store session in localStorage
-5. Redirect to `/[courseId]/home` (same UI, but with Teams + Admin tabs visible)
+**Step 1: Course/Role ID Entry**
+1. User enters ID on splash (Course ID, Trainer ID, or Guest Editor ID)
+2. Query: Check `newslabs.course_id = input` OR `newslabs.trainer_id = input` OR `newslabs.guest_editor_id = input`
+3. If not found → Show error: "Try again"
+4. If found:
+   - Determine role based on which field matched:
+     - Matches `course_id` → role = 'journalist'
+     - Matches `trainer_id` → role = 'trainer'
+     - Matches `guest_editor_id` → role = 'guest_editor'
+   - Show check icon
+   - Display second input field: "Enter your byline"
 
-**Guest Editor:**
-1. User enters `courseId` + `guestEditorPassword` on splash
-2. Query: Verify `newslabs.guest_editor_id = guestEditorPassword`
-3. Detect role = 'guest_editor'
-4. Store session in localStorage
-5. Redirect to `/[courseId]/home` (Teams tab visible, Admin tab hidden)
+**Step 2: Byline Name Entry**
+1. User enters personal byline name (max 30 characters)
+2. Query: Check `journalists.name` unique in this course
+   - If taken → Show error: "Name taken. Try again"
+   - If available → Show check icon
+3. On submit (tap arrow or press Enter):
+   - If role = 'journalist': Create journalist record if first-time login, or validate existing
+   - If role = 'trainer' or 'guest_editor': No journalist record created (they don't participate as journalists)
+   - Show flash message: "Welcome [name]"
+   - Store session in localStorage
+   - Redirect to `/[courseId]/home`
+
+**Key Design Point:** Role detection happens at Step 1, but byline validation happens at Step 2. Same flow for all users (for trainer demonstration consistency).
+
+### Journalist Login Flow (Detailed)
+
+```javascript
+async function authenticateJournalist(courseId, bylineName) {
+  // Step 1: Validate Course ID exists
+  const { data: newslab } = await supabase
+    .from('newslabs')
+    .select('id')
+    .eq('course_id', courseId)
+    .single()
+  
+  if (!newslab) return { error: "Course not found" }
+  
+  // Step 2: Validate byline name availability
+  const { data: existingJournalist } = await supabase
+    .from('journalists')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('name', bylineName)
+  
+  if (existingJournalist.length > 0) {
+    // Returning journalist - no creation needed
+    return { success: true, isReturning: true }
+  }
+  
+  // Step 3: Create new journalist record (first-time login)
+  const { error } = await supabase
+    .from('journalists')
+    .insert({
+      course_id: courseId,
+      name: bylineName,
+      is_editor: false,
+      team_name: null
+    })
+  
+  if (error) return { error: "Failed to create account" }
+  
+  return { success: true, isReturning: false }
+}
+```
+
+### Trainer/Guest Editor Login Flow (Detailed)
+
+```javascript
+async function authenticateTrainer(inputId, bylineName) {
+  // Step 1: Determine if Trainer or Guest Editor
+  const { data: newslab } = await supabase
+    .from('newslabs')
+    .select('trainer_id, guest_editor_id')
+    .single()
+  
+  let role = null
+  if (newslab.trainer_id === inputId) role = 'trainer'
+  if (newslab.guest_editor_id === inputId) role = 'guest_editor'
+  
+  if (!role) return { error: "ID not recognized" }
+  
+  // Step 2: Validate byline name (no creation, just storage)
+  // Trainers/Guest Editors can use any byline; no collision checking needed
+  // (They may create journalist records if they join a team for demo purposes)
+  
+  return { success: true, role, bylineName }
+}
+```
 
 ### Session Validation
 
-Every protected route checks:
-```javascript
-const session = JSON.parse(localStorage.getItem('newslab_session'))
-if (!session || !session.courseId || !session.name) {
-  redirect to '/'
-}
+SvelteKit handles route protection via layout files:
 
-// Optional: Verify session still valid in Supabase
-const { data } = await supabase
-  .from('journalists')
-  .select('*')
-  .eq('course_id', session.courseId)
-  .eq('name', session.name)
-  .single()
+```typescript
+// src/routes/+layout.svelte - Root layout validates session on mount
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import { session } from '$lib/stores'
+  import { validateSession } from '$lib/auth'
 
-if (!data && session.role === 'journalist') {
-  // Journalist deleted or course cleared
-  redirect to '/'
+  onMount(async () => {
+    const currentSession = $session
+    if (currentSession) {
+      const valid = await validateSession(currentSession)
+      if (!valid) {
+        session.logout()
+      }
+    }
+  })
+</script>
+
+// src/routes/[courseId]/+layout.svelte - Protected route guard
+<script lang="ts">
+  import { goto } from '$app/navigation'
+  import { isLoggedIn } from '$lib/stores'
+
+  $: if (!$isLoggedIn) {
+    goto('/')
+  }
+</script>
+
+// src/lib/auth.ts - Session validation function
+export async function validateSession(session: Session): Promise<boolean> {
+  if (!session.courseId || !session.name || !session.role) {
+    return false
+  }
+  
+  if (session.role === 'journalist') {
+    const { data } = await supabase
+      .from('journalists')
+      .select('id')
+      .eq('course_id', session.courseId)
+      .eq('name', session.name)
+      .single()
+    
+    return !!data
+  }
+  
+  return true
 }
 ```
+
+### Returning User (Same Device)
+
+If localStorage contains valid session → Skip splash, redirect to `/[courseId]/home`
+
+### Returning User (Different Device)
+
+1. Splash appears
+2. Enter Course ID again (same as Day 1)
+3. Enter byline name again (must match what they used before)
+4. System validates (course_id, name) exists in journalists table
+5. Redirect to `/[courseId]/home` with full content preserved
+
+---
+
+## Team Membership & Story Handling
+
+### Journalist Joins a Team
+
+```javascript
+async function joinTeam(courseId, journalistName, teamName) {
+  // 1. Verify team exists
+  const { data: team } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('team_name', teamName)
+    .single()
+  
+  if (!team) return { error: "Team not found" }
+  
+  // 2. Add journalist to team
+  const { error } = await supabase
+    .from('journalists')
+    .update({ team_name: teamName })
+    .eq('course_id', courseId)
+    .eq('name', journalistName)
+  
+  if (error) return { error: "Failed to join team" }
+  
+  // 3. Log activity
+  await logActivity(courseId, teamName, 'joined_team', null, journalistName)
+  
+  return { success: true }
+}
+```
+
+### Journalist Leaves a Team
+
+**When a journalist leaves a team (removes themselves from team_name):**
+
+```javascript
+async function leaveTeam(courseId, journalistName, teamName) {
+  // 1. Move all published stories back to drafts
+  const { data: stories } = await supabase
+    .from('stories')
+    .select('id')
+    .eq('course_id', courseId)
+    .eq('team_name', teamName)
+    .eq('author_name', journalistName)
+    .eq('status', 'published')
+  
+  for (const story of stories) {
+    await supabase
+      .from('stories')
+      .update({ status: 'draft' })
+      .eq('id', story.id)
+  }
+  
+  // 2. Remove journalist from team
+  const { error } = await supabase
+    .from('journalists')
+    .update({ team_name: null })
+    .eq('course_id', courseId)
+    .eq('name', journalistName)
+  
+  if (error) return { error: "Failed to leave team" }
+  
+  // 3. Check if team is now empty
+  const { data: remainingMembers } = await supabase
+    .from('journalists')
+    .select('id')
+    .eq('course_id', courseId)
+    .eq('team_name', teamName)
+  
+  if (remainingMembers.length === 0) {
+    // 4. Delete team if empty
+    await supabase
+      .from('teams')
+      .delete()
+      .eq('course_id', courseId)
+      .eq('team_name', teamName)
+  }
+  
+  // 5. Log activity
+  await logActivity(courseId, teamName, 'left_team', null, journalistName)
+  
+  return { success: true }
+}
+```
+
+### Journalist Joins a New Team (After Leaving Previous Team)
+
+**Journalist can immediately republish stories to new team:**
+
+```javascript
+async function republishStoriesToNewTeam(courseId, journalistName, newTeamName) {
+  // Get all draft stories by this journalist
+  const { data: draftStories } = await supabase
+    .from('stories')
+    .select('*')
+    .eq('course_id', courseId)
+    .eq('author_name', journalistName)
+    .eq('status', 'draft')
+  
+  // Update each story's team_name and republish
+  for (const story of draftStories) {
+    await supabase
+      .from('stories')
+      .update({ 
+        team_name: newTeamName,
+        status: 'published'
+      })
+      .eq('id', story.id)
+    
+    // Log publish activity
+    await logActivity(courseId, newTeamName, 'published', story.id, story.title)
+  }
+  
+  return { success: true, storiesRepublished: draftStories.length }
+}
+```
+
+**Notes:**
+- Journalists must belong to a team to publish stories
+- If a journalist leaves a team, all their published stories for that team revert to drafts
+- Drafts remain in the Drafts tab (visible in Home)
+- When they join a new team, they can republish those stories (team_name changes, status changes back to 'published')
+- This workflow is intentionally simple: journalists can edit draft content before republishing if needed
 
 ---
 
@@ -931,56 +1170,71 @@ function renderStory(content, teamPrimaryColor) {
 
 ## State Management
 
-### Svelte Stores
+### Svelte Stores (Current Implementation)
 
-```javascript
-// lib/stores.ts
+```typescript
+// src/lib/stores.ts
 import { writable, derived } from 'svelte/store'
+import type { Session } from './types'
 
-// Session
-export const session = writable({
-  courseId: null,
-  name: null,
-  role: null,
-  teamName: null
-})
+const STORAGE_KEY = 'newslab_session'
 
-// UI State
-export const activeDrawer = writable('none')  // 'write' | 'preview' | 'story_reader' | 'none'
-export const activeTab = writable('home')      // 'home' | 'stream' | 'settings'
-export const selectedStory = writable(null)
+function createSessionStore() {
+  let initial: Session | null = null
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    initial = stored ? JSON.parse(stored) : null
+  }
+  
+  const { subscribe, set, update } = writable<Session | null>(initial)
+  
+  return {
+    subscribe,
+    set: (session: Session | null) => {
+      if (typeof window !== 'undefined') {
+        if (session) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+        } else {
+          localStorage.removeItem(STORAGE_KEY)
+        }
+      }
+      set(session)
+    },
+    update,
+    logout: () => {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+      set(null)
+    }
+  }
+}
 
-// Draft state
-export const currentStory = writable({
-  id: null,
-  title: '',
-  summary: '',
-  featuredImageUrl: null,
-  content: { blocks: [] }
-})
-
-// UI feedback
-export const autoSaveStatus = writable('saved')  // 'saving' | 'saved' | 'error'
-export const notification = writable({ type: null, message: '' })
+export const session = createSessionStore()
 
 // Derived stores
-export const isLoggedIn = derived(session, $session => !!$session.courseId)
-export const isTrainer = derived(session, $session => $session.role === 'trainer')
-export const isGuestEditor = derived(session, $session => $session.role === 'guest_editor')
-export const isTeamEditor = derived(session, $session => $session.role === 'journalist' && someEditorFlag)
+export const isLoggedIn = derived(session, $session => !!$session?.courseId && !!$session?.name)
+export const isTrainer = derived(session, $session => $session?.role === 'trainer')
+export const isGuestEditor = derived(session, $session => $session?.role === 'guest_editor')
+export const isJournalist = derived(session, $session => $session?.role === 'journalist')
+
+// Notifications
+export const notification = writable<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
+
+export function showNotification(type: 'success' | 'error' | 'info', message: string, duration = 2000) {
+  notification.set({ type, message })
+  setTimeout(() => notification.set(null), duration)
+}
 ```
 
 ### localStorage Keys
 
 ```javascript
-// Session
-'newslab_session'  // { courseId, name, role, teamName }
+// Session (auto-persisted by session store)
+'newslab_session'  // { courseId, name, role, teamName, sessionToken, loginTimestamp }
 
-// Drafts (auto-save)
-'draft_${courseId}_${teamName}'  // JSON stringified story
-
-// UI preferences (optional)
-'newslab_ui_preferences'  // { sidebarCollapsed, theme, etc }
+// Drafts (auto-save) - to be implemented
+'draft_${courseId}_${storyId}'  // JSON stringified story
 ```
 
 ---
@@ -1083,18 +1337,40 @@ try {
 
 ## Component Architecture
 
-### Core Components
+### SvelteKit Project Structure
+
+```
+src/
+├── app.html              # HTML template with %sveltekit.head% and %sveltekit.body%
+├── app.css               # Global Tailwind styles
+├── hooks.server.ts       # Server-side hooks (security headers, logging)
+├── lib/
+│   ├── auth.ts           # Authentication functions with discriminated unions
+│   ├── stores.ts         # Svelte stores (session, notification, derived stores)
+│   ├── supabase.ts       # Supabase client initialization
+│   └── types.ts          # TypeScript types (Session, UserRole, Story, etc.)
+├── components/
+│   └── Notification.svelte  # Toast notification component
+└── routes/
+    ├── +layout.svelte    # Root layout (session validation, Notification)
+    ├── +page.svelte      # Splash/login page (/)
+    └── [courseId]/
+        ├── +layout.svelte   # Protected route guard
+        ├── +layout.ts       # Load function for courseId
+        └── home/
+            └── +page.svelte # Home page (/[courseId]/home)
+```
+
+### Core Components (To Be Built)
 
 **Layout:**
-- `MainLayout.svelte` — Wrapper with footer nav, drawer system
 - `FooterNav.svelte` — 4-button footer (home, write, stream, settings)
 
-**Pages:**
-- `HomePage.svelte` — Drafts/Published tabs
-- `DraftsTab.svelte` — List of personal drafts
-- `PublishedTab.svelte` — List of personal published stories
-- `TeamStreamPage.svelte` — Team published stories + pinned
-- `SettingsPage.svelte` — Personal + team settings, Teams/Admin tabs
+**Pages (SvelteKit routes):**
+- `routes/+page.svelte` — Splash/login (replaces SplashScreen.svelte)
+- `routes/[courseId]/home/+page.svelte` — Home with Drafts/Published tabs
+- `routes/[courseId]/stream/+page.svelte` — Team Stream
+- `routes/[courseId]/settings/+page.svelte` — Settings
 
 **Drawers/Modals:**
 - `WriteDrawer.svelte` — Full-screen editor (bottom-to-top slide)
