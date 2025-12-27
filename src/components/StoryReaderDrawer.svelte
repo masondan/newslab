@@ -9,6 +9,9 @@
   export let primaryColor = '5422b0'
   export let secondaryColor = 'f0e6f7'
 
+  let scrollY = 0
+  let headerOpacity = 1
+
   $: displayTeamName = teamName || $session?.teamName || 'Team NewsLab'
   $: storyData = $currentViewingStory?.story
   $: authorName = storyData?.author_name || 'Unknown'
@@ -19,6 +22,13 @@
   function closeDrawer() {
     storyReaderDrawerOpen.set(false)
     currentViewingStory.set(null)
+  }
+
+  function handleScroll(e: Event) {
+    const main = e.target as HTMLElement
+    scrollY = main.scrollTop
+    // Reduce opacity as user scrolls down, min opacity at 100px
+    headerOpacity = Math.max(0.3, 1 - scrollY / 100)
   }
 
   function extractYouTubeId(url: string): string {
@@ -62,45 +72,35 @@
 
 {#if $storyReaderDrawerOpen}
   <div
-    class="fixed inset-0 z-50 bg-white flex flex-col"
+    class="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-[480px] w-full z-50 bg-white flex flex-col max-h-screen"
     transition:fly={{ y: '100%', duration: 300 }}
   >
-    <!-- Team Header -->
+    <!-- Slim Header -->
     <header 
-      class="py-4 text-center border-b-2 shrink-0"
-      style="background-color: #{secondaryColor}; border-color: #{primaryColor};"
+      class="sticky top-0 z-40 px-4 py-3 flex items-center justify-center border-b transition-opacity duration-300"
+      style="background-color: #{secondaryColor}; border-color: #{primaryColor}; border-width: 1px; opacity: {headerOpacity};"
     >
-      <div 
-        class="w-12 h-12 mx-auto mb-2 rounded-lg overflow-hidden bg-white border-2"
-        style="border-color: #{primaryColor};"
+      <!-- Close button -->
+      <button
+        on:click={closeDrawer}
+        class="absolute left-4 w-8 h-8 rounded-full bg-[#efefef] flex items-center justify-center"
+        aria-label="Close"
       >
         <img
-          src={teamLogoUrl || '/icons/logo-teamstream-fallback.png'}
-          alt="Team logo"
-          class="w-full h-full object-cover"
+          src="/icons/icon-close.svg"
+          alt=""
+          class="w-4 h-4"
+          style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
         />
-      </div>
-      <h1 class="text-base font-semibold" style="color: #{primaryColor};">
+      </button>
+      
+      <h1 class="text-sm font-semibold" style="color: #{primaryColor};">
         {displayTeamName}
       </h1>
     </header>
 
-    <!-- Close button -->
-    <button
-      on:click={closeDrawer}
-      class="absolute top-4 left-4 w-8 h-8 rounded-full bg-[#efefef] flex items-center justify-center z-10"
-      aria-label="Close"
-    >
-      <img
-        src="/icons/icon-close.svg"
-        alt=""
-        class="w-4 h-4"
-        style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
-      />
-    </button>
-
     <!-- Content -->
-    <main class="flex-1 px-4 py-6 overflow-y-auto">
+    <main class="flex-1 px-4 py-6 overflow-y-auto" on:scroll={handleScroll}>
       {#if storyData}
         <article>
           <!-- Byline -->

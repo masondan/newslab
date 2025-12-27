@@ -7,15 +7,15 @@
 
   let courseIdInput = ''
   let bylineInput = ''
-  
+
   let step: 'course' | 'byline' = 'course'
   let courseIdStatus: 'idle' | 'loading' | 'valid' | 'invalid' = 'idle'
   let bylineStatus: 'idle' | 'loading' | 'valid' | 'invalid' = 'idle'
   let errorMessage = ''
-  
+
   let validatedCourseId = ''
   let detectedRole: UserRole = 'journalist'
-  
+
   let courseInputFocused = false
   let bylineInputFocused = false
 
@@ -28,12 +28,12 @@
 
   async function handleCourseSubmit() {
     if (!courseIdInput.trim() || courseIdStatus === 'loading') return
-    
+
     courseIdStatus = 'loading'
     errorMessage = ''
-    
+
     const result = await validateCourseId(courseIdInput)
-    
+
     if (result.success) {
       courseIdStatus = 'valid'
       validatedCourseId = result.courseId
@@ -48,20 +48,20 @@
 
   async function handleBylineSubmit() {
     if (!bylineInput.trim() || bylineStatus === 'loading') return
-    
+
     bylineStatus = 'loading'
     errorMessage = ''
-    
+
     const result = await validateByline(validatedCourseId, bylineInput, detectedRole)
-    
+
     if (result.success) {
       bylineStatus = 'valid'
-      
+
       const newSession = createSession(validatedCourseId, bylineInput.trim(), detectedRole)
       session.set(newSession)
-      
+
       showNotification('success', `Welcome ${bylineInput.trim()}`)
-      
+
       setTimeout(() => {
         goto(`/${validatedCourseId}/home`)
       }, 500)
@@ -91,9 +91,9 @@
 <div class="min-h-screen bg-accent-brand flex flex-col items-center justify-center px-6">
   <!-- Logo -->
   <div class="mb-16">
-    <img 
-      src="/icons/logo-textlogo-white.png" 
-      alt="NewsLab" 
+    <img
+      src="/icons/logo-textlogo-white.png"
+      alt="NewsLab"
       class="h-12 w-auto"
     />
   </div>
@@ -101,7 +101,7 @@
   <!-- Input Container -->
   <div class="w-full max-w-sm space-y-4">
     <!-- Course ID Input -->
-    <div 
+    <div
       class="relative flex items-center bg-white rounded-lg overflow-hidden"
       class:ring-2={courseInputFocused && courseIdStatus !== 'valid'}
       class:ring-white={courseInputFocused && courseIdStatus !== 'valid'}
@@ -117,7 +117,7 @@
         class="flex-1 bg-transparent px-4 py-3 text-text-primary placeholder-text-secondary outline-none disabled:opacity-75"
         maxlength="20"
       />
-      
+
       {#if courseIdStatus === 'valid'}
         <!-- Check icon: purple circle with white checkmark -->
         <div class="mr-3 w-8 h-8 rounded-full bg-accent-brand flex items-center justify-center">
@@ -152,7 +152,7 @@
 
     <!-- Byline Input (appears after course validation) -->
     {#if step === 'byline'}
-      <div 
+      <div
         class="relative flex items-center bg-white rounded-lg overflow-hidden"
         class:ring-2={bylineInputFocused && bylineStatus !== 'valid'}
         class:ring-white={bylineInputFocused && bylineStatus !== 'valid'}
@@ -168,7 +168,7 @@
           class="flex-1 bg-transparent px-4 py-3 text-text-primary placeholder-text-secondary outline-none disabled:opacity-75"
           maxlength="30"
         />
-        
+
         {#if bylineStatus === 'valid'}
           <!-- Check icon: purple circle with white checkmark -->
           <div class="mr-3 w-8 h-8 rounded-full bg-accent-brand flex items-center justify-center">

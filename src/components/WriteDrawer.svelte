@@ -995,7 +995,7 @@
 
 {#if $writeDrawerOpen}
   <div
-    class="fixed inset-0 z-50 bg-white flex flex-col"
+    class="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-[480px] w-full z-50 bg-white flex flex-col max-h-screen"
     transition:fly={{ y: '100%', duration: 300 }}
     style="--selection-color: #{$teamColors.secondary};"
   >

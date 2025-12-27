@@ -13,12 +13,16 @@
 
   let stories: Story[] = []
   let loading = true
+  let scrollY = 0
+  let headerOpacity = 1
 
   let teamName = ''
   let teamLogoUrl: string | null = null
   let primaryColor = '5422b0'
   let secondaryColor = 'f0e6f7'
   let fallbackImageUrl: string | null = null
+
+
 
   $: if (open && teamNameToView) {
     loadTeamData()
@@ -69,17 +73,16 @@
 
 {#if open}
   <div
-    class="fixed inset-0 z-50 bg-white flex flex-col"
+    class="fixed bottom-0 left-1/2 -translate-x-1/2 max-w-[480px] w-full z-50 bg-white flex flex-col max-h-screen"
     transition:fly={{ y: '100%', duration: 300 }}
   >
     <!-- Team Header -->
     <header 
-      class="py-6 text-center border-b-2 shrink-0"
-      style="background-color: #{secondaryColor}; border-color: #{primaryColor};"
+      class="py-6 text-center sticky top-0 z-40 shrink-0"
+      style="background-color: #{secondaryColor}cc;"
     >
       <div 
-        class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white border-2"
-        style="border-color: #{primaryColor};"
+        class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden"
       >
         <img
           src={teamLogoUrl || '/icons/logo-teamstream-fallback.png'}
@@ -87,7 +90,7 @@
           class="w-full h-full object-cover"
         />
       </div>
-      <h1 class="text-lg font-semibold" style="color: #{primaryColor};">
+      <h1 class="text-lg font-semibold text-[#1f1f1f]">
         {teamName || teamNameToView || 'Team NewsLab'}
       </h1>
     </header>
@@ -95,7 +98,7 @@
     <!-- Close button -->
     <button
       on:click={closeDrawer}
-      class="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center z-10"
+      class="absolute top-4 left-4 w-8 h-8 rounded-full bg-white/80 flex items-center justify-center z-10 outline-none focus:outline-none"
       aria-label="Close"
     >
       <img

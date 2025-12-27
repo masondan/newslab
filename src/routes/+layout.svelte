@@ -25,16 +25,20 @@
   <title>NewsLab</title>
 </svelte:head>
 
-<Notification />
+<div class="min-h-screen flex items-center justify-center bg-bg-main">
+  <div class="w-full max-w-[480px] flex flex-col md:shadow-2xl md:rounded-lg">
+    <Notification />
 
-{#if isValidating}
-  <div class="min-h-screen bg-accent-brand flex items-center justify-center">
-    <img 
-      src="/icons/logo-textlogo-white.png" 
-      alt="NewsLab" 
-      class="h-12 w-auto animate-pulse"
-    />
+    {#if isValidating}
+      <div class="min-h-screen bg-accent-brand flex items-center justify-center rounded-lg">
+        <img 
+          src="/icons/logo-textlogo-white.png" 
+          alt="NewsLab" 
+          class="h-12 w-auto animate-pulse"
+        />
+      </div>
+    {:else}
+      <slot />
+    {/if}
   </div>
-{:else}
-  <slot />
-{/if}
+</div>
