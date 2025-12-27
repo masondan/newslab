@@ -126,7 +126,7 @@
 
       <!-- Title Row -->
       <div class="flex items-start gap-2">
-        <h3 class="font-semibold text-sm text-[#333333] line-clamp-2 flex-1 group-hover:text-[#{$teamColors.primary}] transition-colors">
+        <h3 class="font-semibold text-base text-[#333333] line-clamp-2 flex-1 group-hover:text-[#{$teamColors.primary}] transition-colors">
           {story.title}
         </h3>
 
@@ -161,13 +161,14 @@
 
       <!-- Body text snippet -->
       {#if bodySnippet}
-        <p class="text-xs text-[#777777] line-clamp-2 mt-1">
+        <p class="text-sm text-[#777777] line-clamp-2 mt-1">
           {bodySnippet}
         </p>
       {/if}
 
-      <!-- Author + Pin indicator -->
+      <!-- Byline + Pin indicator -->
       <div class="flex items-center justify-between mt-2">
+        <span class="text-sm text-[#777777]">{story.author_name}</span>
         {#if showPin && story.is_pinned}
           <div class="flex items-center gap-1 text-xs text-[#777777]">
             <img
@@ -177,10 +178,7 @@
               style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);"
             />
           </div>
-        {:else}
-          <span></span>
         {/if}
-        <span class="text-xs text-[#777777]">{story.author_name}</span>
       </div>
     </div>
   </div>
