@@ -112,7 +112,7 @@
         on:focus={() => courseInputFocused = true}
         on:blur={() => courseInputFocused = false}
         on:keydown={handleCourseKeydown}
-        placeholder="Enter your key"
+        placeholder="Enter your course key"
         disabled={courseIdStatus === 'valid'}
         class="flex-1 bg-transparent px-4 py-3 text-text-primary placeholder-text-secondary outline-none disabled:opacity-75"
         maxlength="20"
