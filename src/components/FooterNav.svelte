@@ -76,7 +76,7 @@
       <!-- Settings (far right) -->
       <a
         href="/{courseId}/settings"
-        class="flex items-center justify-center pl-2"
+        class="flex items-center justify-center w-6"
         aria-label="Settings"
       >
         {#if isSettingsPage}
