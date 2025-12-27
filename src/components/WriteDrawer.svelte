@@ -1192,15 +1192,6 @@
             />
           </button>
 
-          <button on:click={openYouTubeModal} class="p-2" aria-label="Add YouTube">
-            <img
-              src="/icons/icon-youtube.svg"
-              alt=""
-              class="w-5 h-5"
-              style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
-            />
-          </button>
-
           <button 
             on:click={isLinkActive ? removeLink : openLinkModal}
             class="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150"
@@ -1215,6 +1206,15 @@
               style={isLinkActive 
                 ? `filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);` 
                 : "filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"}
+            />
+          </button>
+
+          <button on:click={openYouTubeModal} class="p-2" aria-label="Add YouTube">
+            <img
+              src="/icons/icon-youtube.svg"
+              alt=""
+              class="w-5 h-5"
+              style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
             />
           </button>
         </div>
