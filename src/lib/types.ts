@@ -67,7 +67,6 @@ export interface ContentBlock {
   items?: string[]
   listType?: 'ordered' | 'unordered'
   url?: string
-  caption?: string
   width?: number
   height?: number
   aspectRatio?: string

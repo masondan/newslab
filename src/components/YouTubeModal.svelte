@@ -12,7 +12,7 @@
 
   let youtubeUrl = ''
   let thumbnailFile: File | null = null
-  let thumbnailFileName = ''
+  let thumbnailPreviewUrl: string | null = null
   let uploading = false
 
   function extractVideoId(url: string): string | null {
@@ -30,8 +30,16 @@
     const input = event.target as HTMLInputElement
     if (input.files && input.files[0]) {
       thumbnailFile = input.files[0]
-      thumbnailFileName = input.files[0].name
+      thumbnailPreviewUrl = URL.createObjectURL(input.files[0])
     }
+  }
+
+  function removeThumbnail() {
+    if (thumbnailPreviewUrl) {
+      URL.revokeObjectURL(thumbnailPreviewUrl)
+    }
+    thumbnailFile = null
+    thumbnailPreviewUrl = null
   }
 
   async function handleAdd() {
@@ -57,8 +65,7 @@
 
   function resetAndClose() {
     youtubeUrl = ''
-    thumbnailFile = null
-    thumbnailFileName = ''
+    removeThumbnail()
     dispatch('close')
   }
 
@@ -115,26 +122,42 @@
           <div class="flex-1">
             <span class="block text-sm text-gray-600 mb-1">Custom thumb (square)</span>
             <div class="flex items-center gap-3">
-              <label class="w-16 h-16 border border-dashed border-[#777777] rounded-lg flex items-center justify-center cursor-pointer hover:border-[#5422b0] transition-colors shrink-0">
-                <input
-                  type="file"
-                  accept="image/*"
-                  class="hidden"
-                  on:change={handleFileSelect}
-                />
-                <img
-                  src="/icons/icon-custom-upload.svg"
-                  alt="Upload"
-                  class="w-6 h-6 opacity-50"
-                />
-              </label>
-              {#if thumbnailFileName}
-                <span class="text-sm text-[#777777] truncate">{thumbnailFileName}</span>
+              {#if thumbnailPreviewUrl}
+                <!-- Thumbnail preview with delete button -->
+                <div class="relative w-16 h-16 shrink-0">
+                  <img
+                    src={thumbnailPreviewUrl}
+                    alt="Thumbnail preview"
+                    class="w-16 h-16 rounded-lg object-cover"
+                  />
+                  <button
+                    on:click={removeThumbnail}
+                    class="absolute -top-1 -right-1 w-5 h-5 bg-black/60 rounded-full flex items-center justify-center hover:bg-black/80 transition-colors"
+                    aria-label="Remove thumbnail"
+                  >
+                    <img src="/icons/icon-close.svg" alt="" class="w-2.5 h-2.5 invert" />
+                  </button>
+                </div>
+              {:else}
+                <!-- Upload button -->
+                <label class="w-16 h-16 border border-dashed border-[#777777] rounded-lg flex items-center justify-center cursor-pointer hover:border-[#5422b0] transition-colors shrink-0">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    class="hidden"
+                    on:change={handleFileSelect}
+                  />
+                  <img
+                    src="/icons/icon-custom-upload.svg"
+                    alt="Upload"
+                    class="w-6 h-6 opacity-50"
+                  />
+                </label>
               {/if}
             </div>
           </div>
 
-          <div class="flex items-center gap-4 pb-1">
+          <div class="flex items-center gap-4 pb-1 shrink-0">
             <button
               on:click={resetAndClose}
               class="text-sm text-[#777777] hover:text-[#333]"

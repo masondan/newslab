@@ -202,9 +202,18 @@
   function renderContentToEditor() {
     if (!editorElement) return
     editorElement.innerHTML = ''
-    contentBlocks.forEach(block => {
+    contentBlocks.forEach((block, index) => {
       const el = createBlockElement(block)
-      if (el) editorElement.appendChild(el)
+      if (el) {
+        editorElement.appendChild(el)
+        // Add a paragraph after images/videos to ensure text can flow properly
+        if ((block.type === 'image' || block.type === 'youtube') && index < contentBlocks.length - 1) {
+          const spacer = document.createElement('p')
+          spacer.className = 'mb-4'
+          spacer.innerHTML = '&nbsp;'
+          editorElement.appendChild(spacer)
+        }
+      }
     })
   }
 
@@ -212,12 +221,13 @@
     switch (block.type) {
       case 'paragraph':
         const p = document.createElement('p')
-        p.textContent = block.text || ''
+        // Use innerHTML to preserve inline formatting (bold, links, etc.)
+        p.innerHTML = block.text || ''
         p.className = 'mb-4'
         return p
       case 'heading':
         const h2 = document.createElement('h2')
-        h2.textContent = block.text || ''
+        h2.innerHTML = block.text || ''
         h2.className = 'text-xl font-bold my-4'
         return h2
       case 'bold':
@@ -227,12 +237,14 @@
         return strong
       case 'separator':
         const hr = document.createElement('hr')
-        hr.className = 'w-1/2 mx-auto my-4 border-[#777777]'
+        hr.className = 'w-1/2 mx-auto my-4 border-[#999999]'
         return hr
       case 'image':
         const figure = document.createElement('figure')
-        figure.className = 'image-figure relative mt-4 mb-2'
+        figure.className = 'image-figure relative my-4'
         figure.contentEditable = 'false'
+        figure.style.margin = '1rem 0'
+        figure.dataset.url = block.url || ''
         
         const imgWrapper = document.createElement('div')
         imgWrapper.className = 'relative'
@@ -257,19 +269,7 @@
         imgWrapper.appendChild(imgEl)
         imgWrapper.appendChild(imgDeleteBtn)
         
-        const captionInput = document.createElement('input')
-        captionInput.type = 'text'
-        captionInput.value = block.caption || ''
-        captionInput.placeholder = 'Tap to add caption'
-        captionInput.className = 'w-full text-sm text-center text-[#777777] mt-2 mb-2 outline-none placeholder:text-[#999999] bg-transparent'
-        captionInput.dataset.imageUrl = block.url || ''
-        captionInput.addEventListener('input', () => {
-          handleEditorInput()
-          scheduleAutoSave()
-        })
-        
         figure.appendChild(imgWrapper)
-        figure.appendChild(captionInput)
         return figure
       case 'youtube':
         const videoDiv = document.createElement('div')
@@ -334,6 +334,11 @@
         const tagName = el.tagName.toLowerCase()
         
         if (tagName === 'p') {
+          // Skip spacer paragraphs (those with only &nbsp;)
+          if (el.innerHTML === '&nbsp;' || el.innerHTML === '') {
+            return
+          }
+          
           // Check if paragraph contains only bold text
           const strong = el.querySelector('strong, b')
           const link = el.querySelector('a')
@@ -349,9 +354,17 @@
               color: $teamColors.primary
             })
           } else {
-            // Mixed content or plain text - save as paragraph with HTML preserved
-            const text = el.textContent?.trim()
-            if (text) blocks.push({ type: 'paragraph', text })
+            // Check for any inline formatting
+            const hasFormatting = el.querySelector('strong, b, a, u, em, i')
+            if (hasFormatting) {
+              // Preserve innerHTML to keep formatting
+              const html = el.innerHTML?.trim()
+              if (html) blocks.push({ type: 'paragraph', text: html })
+            } else {
+              // Plain text only
+              const text = el.textContent?.trim()
+              if (text) blocks.push({ type: 'paragraph', text })
+            }
           }
         } else if (tagName === 'h2') {
           blocks.push({ type: 'heading', text: el.textContent || '' })
@@ -362,14 +375,11 @@
           const text = el.textContent?.trim()
           if (text) blocks.push({ type: 'bold', text })
         } else if (tagName === 'figure') {
-          const img = el.querySelector('img')
-          const captionEl = el.querySelector('figcaption')
-          const captionInput = el.querySelector('input') as HTMLInputElement | null
-          if (img) {
+          const imageUrl = el.dataset.url || el.querySelector('img')?.src || ''
+          if (imageUrl) {
             blocks.push({
               type: 'image',
-              url: captionInput?.dataset.imageUrl || img.src,
-              caption: captionInput?.value || captionEl?.textContent || ''
+              url: imageUrl
             })
           }
         } else if (tagName === 'div') {
@@ -393,6 +403,16 @@
               const src = iframe.src
               if (src.includes('youtube')) {
                 blocks.push({ type: 'youtube', url: src })
+              }
+            } else {
+              // Plain div (created by contenteditable on Enter) - treat as paragraph
+              const hasFormatting = el.querySelector('strong, b, a, u, em, i')
+              if (hasFormatting) {
+                const html = el.innerHTML?.trim()
+                if (html) blocks.push({ type: 'paragraph', text: html })
+              } else {
+                const text = el.textContent?.trim()
+                if (text) blocks.push({ type: 'paragraph', text })
               }
             }
           }
@@ -528,9 +548,23 @@
       </div>
     `
     
-    // Insert placeholder at cursor or end
-    if (insertRange && editorElement?.contains(insertRange.commonAncestorContainer)) {
-      insertRange.insertNode(placeholder)
+    // Insert placeholder at editor level (not inside other elements)
+    if (insertRange && editorElement) {
+      // Find the top-level element containing the cursor
+      let insertAfter: Node | null = null
+      let node: Node | null = insertRange.commonAncestorContainer
+      while (node && node.parentNode !== editorElement) {
+        node = node.parentNode
+      }
+      if (node && node.parentNode === editorElement) {
+        insertAfter = node
+      }
+      
+      if (insertAfter) {
+        insertAfter.parentNode?.insertBefore(placeholder, insertAfter.nextSibling)
+      } else {
+        editorElement.appendChild(placeholder)
+      }
     } else if (editorElement) {
       editorElement.appendChild(placeholder)
     }
@@ -538,10 +572,12 @@
     try {
       const result = await uploadImage(file)
       
-      // Create figure element with editable caption and delete button
+      // Create figure element
       const figure = document.createElement('figure')
-      figure.className = 'image-figure relative mt-4 mb-2'
+      figure.className = 'image-figure relative my-4'
+      figure.style.margin = '1rem 0'
       figure.contentEditable = 'false'
+      figure.dataset.url = result.url
       
       const imgWrapper = document.createElement('div')
       imgWrapper.className = 'relative'
@@ -570,21 +606,19 @@
       imgWrapper.appendChild(img)
       imgWrapper.appendChild(deleteBtn)
       
-      const captionInput = document.createElement('input')
-      captionInput.type = 'text'
-      captionInput.placeholder = 'Tap to add caption'
-      captionInput.className = 'w-full text-sm text-center text-[#777777] mt-2 mb-2 outline-none placeholder:text-[#999999] bg-transparent'
-      captionInput.dataset.imageUrl = result.url
-      captionInput.addEventListener('input', () => {
-        handleEditorInput()
-        scheduleAutoSave()
-      })
-      
       figure.appendChild(imgWrapper)
-      figure.appendChild(captionInput)
       
       // Replace placeholder with actual image
       placeholder.replaceWith(figure)
+      
+      // Add an empty paragraph after the figure for typing if there isn't one
+      const nextSibling = figure.nextSibling
+      if (!nextSibling || (nextSibling.nodeType === Node.ELEMENT_NODE && (nextSibling as HTMLElement).tagName.toLowerCase() === 'figure')) {
+        const newPara = document.createElement('p')
+        newPara.className = 'mb-4'
+        newPara.innerHTML = '<br>'
+        figure.insertAdjacentElement('afterend', newPara)
+      }
       
       handleEditorInput()
       scheduleAutoSave()
@@ -675,7 +709,7 @@
 
   function insertSeparator() {
     const hr = document.createElement('hr')
-    hr.className = 'w-1/2 mx-auto my-4 border-[#777777]'
+    hr.className = 'w-1/2 mx-auto my-4 border-[#999999]'
     
     const selection = window.getSelection()
     if (selection && selection.rangeCount > 0) {
@@ -801,7 +835,53 @@
     showLinkModal = false
   }
 
+  function removeLink() {
+    const selection = window.getSelection()
+    if (!selection || selection.rangeCount === 0) return
+
+    const range = selection.getRangeAt(0)
+    let linkElement: HTMLElement | null = null
+    let node: Node | null = range.commonAncestorContainer
+
+    // Walk up to find the link element
+    while (node && node !== editorElement) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const el = node as HTMLElement
+        if (el.tagName.toLowerCase() === 'a') {
+          linkElement = el
+          break
+        }
+      }
+      node = node.parentNode
+    }
+
+    if (!linkElement) return
+
+    // Get the link text
+    const linkText = linkElement.textContent || ''
+
+    // Create a text node with the link text
+    const textNode = document.createTextNode(linkText)
+
+    // Replace the link with the text
+    linkElement.replaceWith(textNode)
+
+    handleEditorInput()
+    scheduleAutoSave()
+
+    // Deselect to immediately reset link state in toolbar
+    selection.removeAllRanges()
+  }
+
   function openPreview() {
+    // Ensure contentBlocks is up-to-date before opening preview
+    contentBlocks = parseEditorContent()
+    console.log('=== PREVIEW DEBUG ===')
+    console.log('title:', title)
+    console.log('contentBlocks:', contentBlocks)
+    console.log('editorElement:', editorElement)
+    console.log('editorElement.innerHTML:', editorElement?.innerHTML)
+    console.log('editorElement.childNodes:', editorElement?.childNodes)
     previewDrawerOpen.set(true)
   }
 
@@ -1122,13 +1202,13 @@
           </button>
 
           <button 
-            on:click={openLinkModal} 
+            on:click={isLinkActive ? removeLink : openLinkModal}
             class="w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150"
             style={isLinkActive ? `background-color: #${$teamColors.secondary};` : ''}
-            aria-label="Add link"
+            aria-label={isLinkActive ? "Remove link" : "Add link"}
           >
             <img
-              src="/icons/icon-link.svg"
+              src={isLinkActive ? "/icons/icon-unlink.svg" : "/icons/icon-link.svg"}
               alt=""
               class="w-5 h-5 transition-transform duration-150"
               class:scale-110={isLinkActive}
@@ -1207,14 +1287,16 @@
     on:close={() => showLinkModal = false}
   />
 
-  <!-- Preview Drawer -->
-  <PreviewDrawer
-    {title}
-    summary=""
-    {featuredImageUrl}
-    {featuredImageCaption}
-    {contentBlocks}
-  />
+  <!-- Preview Drawer - only mount when open to ensure fresh props -->
+  {#if $previewDrawerOpen}
+    <PreviewDrawer
+      {title}
+      summary=""
+      {featuredImageUrl}
+      {featuredImageCaption}
+      {contentBlocks}
+    />
+  {/if}
 
   <!-- Lock Warning Modal -->
   {#if isLocked && lockedBy}

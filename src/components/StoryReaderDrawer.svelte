@@ -40,10 +40,9 @@
         const items = (block.items || []).map(item => `<li>${escapeHtml(item)}</li>`).join('')
         return `<${tag} class="${listClass} ml-6 mb-4 text-base text-[#333333]">${items}</${tag}>`
       case 'separator':
-        return `<hr class="w-1/2 mx-auto my-6 border-[#777777]" />`
+        return `<hr class="w-1/2 mx-auto my-6 border-[#999999]" />`
       case 'image':
-        const caption = block.caption ? `<figcaption class="text-sm text-center text-[#777777] mt-2">${escapeHtml(block.caption)}</figcaption>` : ''
-        return `<figure class="my-4"><img src="${getOptimizedUrl(block.url || '')}" alt="" class="w-full rounded-lg" />${caption}</figure>`
+        return `<figure class="my-4"><img src="${getOptimizedUrl(block.url || '')}" alt="" class="w-full rounded-lg" /></figure>`
       case 'youtube':
         const videoId = extractYouTubeId(block.url || '')
         return `<div class="my-4 aspect-video"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full rounded-lg" frameborder="0" allowfullscreen></iframe></div>`

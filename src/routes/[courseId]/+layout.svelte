@@ -5,7 +5,6 @@
   import FooterNav from '$components/FooterNav.svelte'
   import WriteDrawer from '$components/WriteDrawer.svelte'
   import StoryReaderDrawer from '$components/StoryReaderDrawer.svelte'
-  import PreviewDrawer from '$components/PreviewDrawer.svelte'
 
   $: {
     if (!$isLoggedIn) {
@@ -19,5 +18,4 @@
   <FooterNav />
   <WriteDrawer />
   <StoryReaderDrawer />
-  <PreviewDrawer />
 </div>

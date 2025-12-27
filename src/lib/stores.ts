@@ -119,6 +119,7 @@ export const COLOR_PALETTES = [
   { name: 'Baltic Blue', primary: '00639c', secondary: 'dbeffa' },
   { name: 'Royal Orchid', primary: '9100ae', secondary: 'f0cbf6' },
   { name: 'Oxidized Iron', primary: 'b12e09', secondary: 'f6d4cb' },
-  { name: 'Brick Ember', primary: 'd60202', secondary: 'ffd6d6' }
+  { name: 'Brick Ember', primary: 'd60202', secondary: 'ffd6d6' },
+  { name: 'Charcoal', primary: '333333', secondary: '999999' }
 ] as const
 

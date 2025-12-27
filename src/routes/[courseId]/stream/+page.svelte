@@ -241,7 +241,7 @@
 <div class="min-h-screen bg-white flex flex-col pb-[70px]">
   <!-- Team Header -->
   <header 
-    class="py-6 text-center border-b-2"
+    class="py-6 text-center border-b-2 mb-6"
     style="background-color: #{secondaryColor}; border-color: #{primaryColor};"
   >
     <div class="w-16 h-16 mx-auto mb-3 rounded-lg overflow-hidden bg-white border-2" style="border-color: #{primaryColor};">

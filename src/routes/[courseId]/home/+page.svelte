@@ -259,7 +259,7 @@
 
 <div class="min-h-screen bg-white flex flex-col pb-[70px]">
   <!-- Header with Tabs -->
-  <div class="px-4 pt-4">
+  <div class="px-4 pt-4 pb-6">
     <div class="flex items-center justify-between">
       <div class="flex gap-6">
         <button
@@ -311,7 +311,7 @@
           {/if}
           <button
             on:click={toggleSelectMode}
-            class="p-1 mr-1"
+            class="p-1 ml-4"
             aria-label={selectMode ? 'Exit select mode' : 'Enter select mode'}
           >
             <img

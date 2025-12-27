@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores'
-  import { session, writeDrawerOpen } from '$lib/stores'
+  import { session, writeDrawerOpen, teamColors } from '$lib/stores'
 
   $: courseId = $session?.courseId || ''
   $: currentPath = $page.url.pathname
@@ -11,6 +11,14 @@
 
   function openWriteDrawer() {
     writeDrawerOpen.set(true)
+  }
+
+  // Convert hex color to CSS filter
+  function hexToFilter(hex: string): string {
+    // For team colors, use a generic color filter approach
+    // The purple filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%)
+    // We'll use a simpler approach: just set the color directly with background
+    return `#${hex}`
   }
 </script>
 
@@ -24,12 +32,7 @@
         aria-label="Home"
       >
         {#if isHomePage}
-          <img
-            src="/icons/icon-user-fill.svg"
-            alt=""
-            class="w-6 h-6"
-            style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-          />
+            <div class="w-6 h-6" style="background-color: #{$teamColors.primary}; -webkit-mask-image: url('/icons/icon-user-fill.svg'); mask-image: url('/icons/icon-user-fill.svg'); -webkit-mask-size: contain; mask-size: contain;"></div>
         {:else}
           <img
             src="/icons/icon-user.svg"
@@ -46,12 +49,7 @@
         class="flex items-center justify-center mx-3 -mt-5"
         aria-label="Write new story"
       >
-        <img
-          src="/icons/icon-newstory.svg"
-          alt=""
-          class="w-14 h-14"
-          style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-        />
+        <div class="w-14 h-14" style="background-color: #{$teamColors.primary}; -webkit-mask-image: url('/icons/icon-newstory.svg'); mask-image: url('/icons/icon-newstory.svg'); -webkit-mask-size: contain; mask-size: contain;"></div>
       </button>
 
       <!-- Team Stream -->
@@ -61,12 +59,7 @@
         aria-label="Team Stream"
       >
         {#if isStreamPage}
-          <img
-            src="/icons/icon-group-fill.svg"
-            alt=""
-            class="w-6 h-6"
-            style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-          />
+          <div class="w-6 h-6" style="background-color: #{$teamColors.primary}; -webkit-mask-image: url('/icons/icon-group-fill.svg'); mask-image: url('/icons/icon-group-fill.svg'); -webkit-mask-size: contain; mask-size: contain;"></div>
         {:else}
           <img
             src="/icons/icon-group.svg"
@@ -84,12 +77,7 @@
         aria-label="Settings"
       >
         {#if isSettingsPage}
-          <img
-            src="/icons/icon-settings-fill.svg"
-            alt=""
-            class="w-6 h-6"
-            style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-          />
+          <div class="w-6 h-6" style="background-color: #{$teamColors.primary}; -webkit-mask-image: url('/icons/icon-settings-fill.svg'); mask-image: url('/icons/icon-settings-fill.svg'); -webkit-mask-size: contain; mask-size: contain;"></div>
         {:else}
           <img
             src="/icons/icon-settings.svg"

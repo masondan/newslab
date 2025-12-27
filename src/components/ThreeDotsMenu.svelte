@@ -30,6 +30,7 @@
   }
 
   function handleExport(format: 'pdf' | 'txt') {
+    console.log('[ThreeDotsMenu] handleExport called with format:', format)
     dispatch('export', { format })
     showExportMenu = false
   }
@@ -76,37 +77,12 @@
     {/if}
 
     <!-- Export -->
-    <div class="relative">
-      <button
-        on:click={() => showExportMenu = !showExportMenu}
-        class="px-3 py-2 hover:bg-black/10 transition-colors"
-      >
-        Export
-      </button>
-
-      {#if showExportMenu}
-        <div
-          class="absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded-lg overflow-hidden shadow-lg z-10"
-          style="background-color: #{$teamColors.secondary};"
-          transition:fly={{ y: -5, duration: 100 }}
-        >
-          <button
-            on:click={() => handleExport('pdf')}
-            class="block w-full px-6 py-2 text-sm hover:bg-black/5 transition-colors"
-            style="color: #{$teamColors.primary};"
-          >
-            PDF
-          </button>
-          <button
-            on:click={() => handleExport('txt')}
-            class="block w-full px-6 py-2 text-sm hover:bg-black/5 transition-colors"
-            style="color: #{$teamColors.primary};"
-          >
-            TXT
-          </button>
-        </div>
-      {/if}
-    </div>
+    <button
+      on:click|stopPropagation={() => { console.log('[ThreeDotsMenu] Export button clicked, toggling menu'); showExportMenu = !showExportMenu }}
+      class="px-3 py-2 hover:bg-black/10 transition-colors"
+    >
+      Export
+    </button>
 
     <!-- Pin toggle (stream only, editors only) -->
     {#if showPin}
@@ -134,4 +110,29 @@
       Edit
     </button>
   </div>
+
+  <!-- Export submenu (outside toolbar to avoid overflow clipping) -->
+  {#if showExportMenu}
+    <div
+      class="absolute top-full right-0 mt-1 rounded-lg overflow-hidden shadow-lg z-50"
+      style="background-color: #{$teamColors.secondary};"
+      transition:fly={{ y: -5, duration: 100 }}
+      on:click|stopPropagation
+    >
+      <button
+        on:click|stopPropagation={() => handleExport('pdf')}
+        class="block w-full px-6 py-2 text-sm hover:bg-black/5 transition-colors"
+        style="color: #{$teamColors.primary};"
+      >
+        PDF
+      </button>
+      <button
+        on:click|stopPropagation={() => handleExport('txt')}
+        class="block w-full px-6 py-2 text-sm hover:bg-black/5 transition-colors"
+        style="color: #{$teamColors.primary};"
+      >
+        TXT
+      </button>
+    </div>
+  {/if}
 </div>

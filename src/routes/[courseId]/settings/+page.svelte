@@ -881,7 +881,7 @@
         {/if}
 
         <!-- Logout Button -->
-        <div class="mt-8 pt-6 border-t border-[#efefef]">
+        <div class="mt-6">
           <button
             type="button"
             on:click={handleLogout}

@@ -34,7 +34,7 @@
 </script>
 
 <div class="space-y-3">
-  <div class="flex items-center justify-between">
+  <div class="flex items-center justify-between pb-1 border-b border-[#efefef]">
     <span class="text-sm text-[#777777]">Share team stream<span class="text-[#777777]">*</span></span>
     
     <button

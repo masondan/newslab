@@ -54,10 +54,26 @@
     dispatch('select', { id: story.id, selected: !selected })
   }
 
-  $: thumbnailSrc = story.featured_image_url
-    ? getThumbnailUrl(story.featured_image_url)
-    : fallbackImageUrl || '/icons/logo-teamstream-fallback.png'
-
+  // Extract thumbnail from featured image or first image in content
+  function getThumbnail(): string {
+    if (story.featured_image_url) {
+      return getThumbnailUrl(story.featured_image_url)
+    }
+    
+    // Look for first image or youtube in content blocks
+    const blocks = story.content?.blocks || []
+    for (const block of blocks) {
+      if (block.type === 'image' && block.url) {
+        return getThumbnailUrl(block.url)
+      }
+      if (block.type === 'youtube' && block.thumbnailUrl) {
+        return block.thumbnailUrl
+      }
+    }
+    
+    return fallbackImageUrl || '/icons/logo-teamstream-fallback.png'
+  }
+  
   // Extract body text snippet from content blocks if no summary
   function getSnippet(): string {
     if (story.summary) return story.summary
@@ -71,111 +87,119 @@
     return ''
   }
   
+  $: thumbnailSrc = getThumbnail()
   $: bodySnippet = getSnippet()
 </script>
 
 <!-- svelte-ignore a11y-no-noninteractive-element-to-interactive-role -->
 <article
-  class="flex gap-3 py-3 cursor-pointer group"
-  on:click={handleCardClick}
-  on:keydown={(e) => e.key === 'Enter' && handleCardClick()}
-  role="button"
-  tabindex="0"
+  class="flex flex-col cursor-pointer"
 >
-  <!-- Thumbnail -->
-  <div class="w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-[#efefef]">
-    <img
-      src={thumbnailSrc}
-      alt=""
-      class="w-full h-full object-cover"
-    />
-  </div>
-
-  <!-- Content -->
-  <div class="flex-1 min-w-0">
-    <!-- Timestamp -->
-    <div class="flex items-center gap-1 text-xs text-[#777777] mb-1">
+  <!-- Card content -->
+  <div
+    class="flex gap-3 py-3 group"
+    on:click={handleCardClick}
+    on:keydown={(e) => e.key === 'Enter' && handleCardClick()}
+    role="button"
+    tabindex="0"
+  >
+    <!-- Thumbnail -->
+    <div class="w-20 h-20 shrink-0 rounded-lg overflow-hidden bg-[#efefef]">
       <img
-        src="/icons/icon-time.svg"
+        src={thumbnailSrc}
         alt=""
-        class="w-3 h-3 opacity-50"
+        class="w-full h-full object-cover"
       />
-      <span>{formatTimeAgo(story.updated_at)}</span>
     </div>
 
-    <!-- Title Row -->
-    <div class="flex items-start gap-2">
-      <h3 class="font-semibold text-sm text-[#333333] line-clamp-2 flex-1 group-hover:text-[#{$teamColors.primary}] transition-colors">
-        {story.title}
-      </h3>
+    <!-- Content -->
+    <div class="flex-1 min-w-0">
+      <!-- Timestamp -->
+      <div class="flex items-center gap-1 text-xs text-[#777777] mb-1">
+        <img
+          src="/icons/icon-time.svg"
+          alt=""
+          class="w-3 h-3 opacity-50"
+        />
+        <span>{formatTimeAgo(story.updated_at)}</span>
+      </div>
 
-      {#if selectMode}
-        <button
-          on:click|stopPropagation={toggleSelect}
-          class="shrink-0 mt-0.5"
-          aria-label={selected ? 'Deselect' : 'Select'}
-        >
-          <img
-            src={selected ? '/icons/icon-radio.svg' : '/icons/icon-circle.svg'}
-            alt=""
-            class="w-5 h-5"
-            style={selected ? 'filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);' : 'filter: invert(47%) sepia(0%) saturate(0%) brightness(55%);'}
-          />
-        </button>
-      {:else if showMenu}
-        <button
-          on:click|stopPropagation={() => menuOpen = !menuOpen}
-          class="shrink-0 p-1 -mr-1"
-          aria-label="More options"
-        >
-          <img
-            src="/icons/icon-more.svg"
-            alt=""
-            class="w-5 h-5"
-            style={menuOpen ? 'filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);' : 'filter: invert(47%) sepia(0%) saturate(0%) brightness(55%);'}
-          />
-        </button>
+      <!-- Title Row -->
+      <div class="flex items-start gap-2">
+        <h3 class="font-semibold text-sm text-[#333333] line-clamp-2 flex-1 group-hover:text-[#{$teamColors.primary}] transition-colors">
+          {story.title}
+        </h3>
+
+        {#if selectMode}
+          <button
+            on:click|stopPropagation={toggleSelect}
+            class="shrink-0 mt-0.5"
+            aria-label={selected ? 'Deselect' : 'Select'}
+          >
+            <img
+              src={selected ? '/icons/icon-radio.svg' : '/icons/icon-circle.svg'}
+              alt=""
+              class="w-5 h-5"
+              style={selected ? 'filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);' : 'filter: invert(47%) sepia(0%) saturate(0%) brightness(55%);'}
+            />
+          </button>
+        {:else if showMenu}
+          <button
+            on:click|stopPropagation={() => menuOpen = !menuOpen}
+            class="shrink-0 p-1 -mr-1"
+            aria-label="More options"
+          >
+            <img
+              src="/icons/icon-more.svg"
+              alt=""
+              class="w-5 h-5"
+              style={menuOpen ? 'filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);' : 'filter: invert(47%) sepia(0%) saturate(0%) brightness(55%);'}
+            />
+          </button>
+        {/if}
+      </div>
+
+      <!-- Body text snippet -->
+      {#if bodySnippet}
+        <p class="text-xs text-[#777777] line-clamp-2 mt-1">
+          {bodySnippet}
+        </p>
       {/if}
-    </div>
 
-    <!-- Body text snippet -->
-    {#if bodySnippet}
-      <p class="text-xs text-[#777777] line-clamp-2 mt-1">
-        {bodySnippet}
-      </p>
-    {/if}
-
-    <!-- Author + Pin indicator -->
-    <div class="flex items-center justify-between mt-2">
-      {#if showPin && story.is_pinned}
-        <div class="flex items-center gap-1 text-xs text-[#777777]">
-          <img
-            src="/icons/icon-pin-fill.svg"
-            alt=""
-            class="w-3 h-3"
-            style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);"
-          />
-        </div>
-      {:else}
-        <span></span>
-      {/if}
-      <span class="text-xs text-[#777777]">{story.author_name}</span>
+      <!-- Author + Pin indicator -->
+      <div class="flex items-center justify-between mt-2">
+        {#if showPin && story.is_pinned}
+          <div class="flex items-center gap-1 text-xs text-[#777777]">
+            <img
+              src="/icons/icon-pin-fill.svg"
+              alt=""
+              class="w-3 h-3"
+              style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);"
+            />
+          </div>
+        {:else}
+          <span></span>
+        {/if}
+        <span class="text-xs text-[#777777]">{story.author_name}</span>
+      </div>
     </div>
   </div>
-</article>
 
-<!-- Three Dots Menu -->
-{#if menuOpen && showMenu}
-  <ThreeDotsMenu
-    type={menuType}
-    isPinned={story.is_pinned}
-    {isEditor}
-    on:edit={() => { dispatch('edit', { id: story.id }); menuOpen = false }}
-    on:delete={() => { dispatch('delete', { id: story.id }); menuOpen = false }}
-    on:unpublish={() => { dispatch('unpublish', { id: story.id }); menuOpen = false }}
-    on:export={(e) => { dispatch('export', { id: story.id, format: e.detail.format }); menuOpen = false }}
-    on:pin={() => { dispatch('pin', { id: story.id }); menuOpen = false }}
-    on:unpin={() => { dispatch('unpin', { id: story.id }); menuOpen = false }}
-    on:close={() => menuOpen = false}
-  />
-{/if}
+  <!-- Three Dots Menu -->
+  {#if menuOpen && showMenu}
+    <div class="flex justify-end pt-1 pb-3 px-3">
+      <ThreeDotsMenu
+        type={menuType}
+        isPinned={story.is_pinned}
+        {isEditor}
+        on:edit={() => { dispatch('edit', { id: story.id }); menuOpen = false }}
+        on:delete={() => { dispatch('delete', { id: story.id }); menuOpen = false }}
+        on:unpublish={() => { dispatch('unpublish', { id: story.id }); menuOpen = false }}
+        on:export={(e) => { dispatch('export', { id: story.id, format: e.detail.format }); menuOpen = false }}
+        on:pin={() => { dispatch('pin', { id: story.id }); menuOpen = false }}
+        on:unpin={() => { dispatch('unpin', { id: story.id }); menuOpen = false }}
+        on:close={() => menuOpen = false}
+      />
+    </div>
+  {/if}
+</article>

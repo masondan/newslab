@@ -234,7 +234,7 @@
     >
       <!-- Team Members -->
       <div>
-        <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center justify-between mb-3 pb-1 border-b border-[#efefef]">
           <span class="text-sm text-[#777777]">Team Members</span>
           <span class="text-sm text-[#777777]">Editor</span>
         </div>
@@ -242,7 +242,7 @@
         {#if loadingMembers}
           <p class="text-[#999999] text-sm py-3">Loading...</p>
         {:else if members.length > 0}
-          <div class="border-t border-[#efefef]">
+          <div>
             {#each members as member (member.id)}
               <TeamMemberItem
                 name={member.name}
@@ -298,8 +298,8 @@
       </div>
 
       <!-- Color Palette -->
-      <div class="space-y-2">
-        <div class="flex items-baseline justify-between">
+      <div class="pb-4">
+        <div class="flex items-baseline justify-between pb-2 mb-3 border-b border-[#ddd]">
           <span class="text-sm text-[#777777]">Pick a team theme<span class="text-[#777777]">*</span></span>
           <span class="text-xs text-[#777777]">*Editors only</span>
         </div>

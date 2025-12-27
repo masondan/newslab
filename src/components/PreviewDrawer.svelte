@@ -14,6 +14,7 @@
 
   $: displayTeamName = teamName || $session?.teamName || 'Team NewsLab'
   $: authorName = $session?.name || 'Journalist'
+  $: console.log('=== PREVIEW DRAWER RECEIVED ===', { title, contentBlocks, showEmpty: !title && contentBlocks.length === 0 })
 
   function closeDrawer() {
     previewDrawerOpen.set(false)
@@ -25,11 +26,10 @@
   }
 </script>
 
-{#if $previewDrawerOpen}
-  <div
-    class="fixed inset-0 z-[55] bg-white flex flex-col"
-    transition:fly={{ x: '100%', duration: 300 }}
-  >
+<div
+  class="fixed inset-0 z-[55] bg-white flex flex-col"
+  transition:fly={{ x: '100%', duration: 300 }}
+>
     <!-- Team Header -->
     <header
       class="py-6 px-4 text-center"
@@ -37,7 +37,7 @@
     >
       <button
         on:click={closeDrawer}
-        class="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#efefef] flex items-center justify-center"
+        class="absolute top-4 left-4 w-8 h-8 rounded-full bg-[#efefef] flex items-center justify-center"
         aria-label="Back"
       >
         <img
@@ -107,13 +107,13 @@
       <div class="prose prose-sm max-w-none text-[#333333]">
         {#each contentBlocks as block}
           {#if block.type === 'paragraph'}
-            <p class="mb-4">{block.text}</p>
+            <p class="mb-4">{@html block.text}</p>
           {:else if block.type === 'heading'}
-            <h3 class="text-xl font-bold text-[#333333] mb-4">{block.text}</h3>
+            <h3 class="text-xl font-bold text-[#333333] mb-4">{@html block.text}</h3>
           {:else if block.type === 'bold'}
-            <p class="mb-4"><strong>{block.text}</strong></p>
+            <p class="mb-4"><strong>{@html block.text}</strong></p>
           {:else if block.type === 'separator'}
-            <hr class="w-1/2 mx-auto my-6 border-[#777777]" />
+            <hr class="w-1/2 mx-auto my-6 border-[#999999]" />
           {:else if block.type === 'image'}
             <figure class="mb-4">
               <img
@@ -121,11 +121,6 @@
                 alt=""
                 class="w-full rounded-lg"
               />
-              {#if block.caption}
-                <figcaption class="text-sm text-[#777777] text-center mt-2">
-                  {block.caption}
-                </figcaption>
-              {/if}
             </figure>
           {:else if block.type === 'youtube'}
             <div class="mb-4 aspect-video">
@@ -161,4 +156,3 @@
       {/if}
     </main>
   </div>
-{/if}

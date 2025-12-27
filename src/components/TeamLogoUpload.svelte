@@ -71,9 +71,8 @@
 </script>
 
 <div class="space-y-2">
-  <div class="flex items-baseline justify-between">
+  <div class="flex items-baseline justify-between pb-1 border-b border-[#efefef]">
     <span class="text-sm text-[#777777]">Upload a team logo (square)<span class="text-[#777777]">*</span></span>
-    <span class="text-xs text-[#777777]">*Editors only</span>
   </div>
 
   <input
