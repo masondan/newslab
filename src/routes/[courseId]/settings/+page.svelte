@@ -268,7 +268,7 @@
     originalBylineName = newName
     bylineEditing = false
     bylineSaving = false
-    showNotification('success', 'Saved')
+    showNotification('success', 'Byline changed')
   }
 
   // Create team validation with debounce
@@ -744,9 +744,14 @@
       <div class="space-y-6">
         <!-- Byline Section -->
         <div>
-          <label for="byline-input" class="block text-sm text-[#777777] mb-2">Byline</label>
-          <div class="flex items-center gap-2">
+          <div class="flex items-start gap-2">
+            <!-- Left column: label, input, helper text -->
             <div class="flex-1">
+              <div class="flex items-center justify-between mb-2">
+                <label for="byline-input" class="text-sm text-[#777777]">Byline</label>
+                <span class="text-xs text-[#999999]">{bylineName.length} / 30</span>
+              </div>
+              
               <input
                 id="byline-input"
                 type="text"
@@ -756,77 +761,91 @@
                 maxlength="30"
                 class="w-full bg-[#efefef] rounded-lg px-4 py-3 text-base outline-none transition-all"
                 class:ring-2={bylineEditing}
-                class:ring-[#5422b0]={bylineEditing}
-                style={bylineEditing ? `--tw-ring-color: #${primaryColor}` : ''}
+                style={bylineEditing ? `ring-color: #${primaryColor}; --tw-ring-color: #${primaryColor}` : ''}
               />
+              
+              <!-- Helper text -->
+              {#if bylineEditing}
+                <p class="text-sm mt-2" style="color: #{bylineValid ? (bylineName !== originalBylineName && bylineName.trim().length > 0 ? '057373' : '777777') : '996633'};">
+                  {#if !bylineValid}
+                    Name taken. Try again
+                  {:else if bylineName !== originalBylineName && bylineName.trim().length > 0}
+                    Name available
+                  {:else}
+                    Choose a new byline
+                  {/if}
+                </p>
+              {/if}
             </div>
 
-            {#if bylineValidating}
-              <div class="w-5 h-5 border-2 border-[#777777] border-t-transparent rounded-full animate-spin"></div>
-            {:else if bylineEditing}
-              {#if bylineValid && bylineName !== originalBylineName}
-                <img
-                  src="/icons/icon-check.svg"
-                  alt="Available"
-                  class="w-5 h-5"
-                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-                />
-              {:else if !bylineValid}
-                <img
-                  src="/icons/icon-close-circle-fill.svg"
-                  alt="Not available"
-                  class="w-5 h-5"
-                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-                />
+            <!-- Right column: icon (fixed position aligned with input center) -->
+            <div class="flex items-center" style="margin-top: 42px; height: 20px;">
+              {#if bylineValidating}
+                <div 
+                  class="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin"
+                  style="border-color: #{primaryColor}; border-top-color: transparent;"
+                ></div>
+              {:else if bylineEditing}
+                {#if bylineValid && bylineName !== originalBylineName && bylineName.trim().length > 0}
+                  <img
+                    src="/icons/icon-check.svg"
+                    alt="Available"
+                    class="w-5 h-5"
+                    style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+                  />
+                {:else if !bylineValid}
+                  <img
+                    src="/icons/icon-close-circle-fill.svg"
+                    alt="Not available"
+                    class="w-5 h-5"
+                    style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
+                  />
+                {:else}
+                  <img
+                    src="/icons/icon-circle.svg"
+                    alt=""
+                    class="w-5 h-5"
+                    style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
+                  />
+                {/if}
               {:else}
                 <img
-                  src="/icons/icon-circle.svg"
-                  alt=""
+                  src="/icons/icon-check.svg"
+                  alt="Verified"
                   class="w-5 h-5"
-                  style="filter: invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(55%) contrast(92%);"
+                  style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
                 />
               {/if}
-            {:else}
-              <img
-                src="/icons/icon-check.svg"
-                alt="Verified"
-                class="w-5 h-5"
-                style="filter: invert(18%) sepia(89%) saturate(2264%) hue-rotate(254deg) brightness(87%) contrast(97%);"
-              />
-            {/if}
+            </div>
           </div>
 
-          {#if bylineError}
-            <p class="text-sm text-[#777777] mt-1">{bylineError}</p>
-          {/if}
-
-          <div class="flex items-center justify-between mt-1">
-            <span class="text-xs text-[#999999]">{bylineName.length} / 30</span>
-
-            {#if bylineEditing}
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  on:click={cancelBylineEdit}
-                  class="px-3 py-1 rounded-full text-sm font-medium transition-all"
-                  style="color: #${primaryColor}; border: 1px solid #${primaryColor};"
-                  aria-label="Cancel"
-                >
-                  Cancel
-                </button>
+          <!-- Toolbar row (aligned with input, not full width) -->
+          {#if bylineEditing}
+            <div class="flex justify-end mt-1 mr-7">
+              <div 
+                class="flex items-center rounded-full px-4 py-2 text-white text-sm font-medium"
+                style="background-color: #{primaryColor};"
+              >
                 <button
                   type="button"
                   on:click={saveByline}
-                  disabled={!bylineValid || bylineName === originalBylineName || bylineSaving}
-                  class="px-3 py-1 rounded-full text-white text-sm font-medium transition-opacity"
-                  class:opacity-50={!bylineValid || bylineName === originalBylineName || bylineSaving}
-                  style="background-color: #${primaryColor};"
+                  disabled={!bylineValid || bylineName === originalBylineName || bylineName.trim().length === 0 || bylineSaving}
+                  class="transition-opacity"
+                  class:opacity-50={!bylineValid || bylineName === originalBylineName || bylineName.trim().length === 0 || bylineSaving}
                 >
-                  {bylineSaving ? 'Saving...' : 'Confirm'}
+                  {bylineSaving ? 'Saving...' : 'Change name'}
+                </button>
+                <span class="mx-3 opacity-60">|</span>
+                <button
+                  type="button"
+                  on:click={cancelBylineEdit}
+                  class="transition-opacity hover:opacity-80"
+                >
+                  Cancel
                 </button>
               </div>
-            {/if}
-          </div>
+            </div>
+          {/if}
         </div>
 
         <!-- Create a Team Section -->
@@ -921,6 +940,22 @@
                 </button>
               {/each}
             </div>
+          </div>
+        {/if}
+
+        <!-- Teams Placeholder Section (when no team selected) -->
+        {#if !currentTeamName}
+          <div>
+            <span class="text-sm text-[#777777]">Teams</span>
+            <div class="w-full border-b border-[#e0e0e0] mt-2"></div>
+            <p class="text-center text-[#999999] text-sm py-6">All teams currently appear here</p>
+          </div>
+
+          <!-- Team Members Placeholder Section -->
+          <div>
+            <span class="text-sm text-[#777777]">Team members</span>
+            <div class="w-full border-b border-[#e0e0e0] mt-2"></div>
+            <p class="text-center text-[#999999] text-sm py-6">Team members currently appear here</p>
           </div>
         {/if}
 
