@@ -2,11 +2,13 @@
   import { createEventDispatcher } from 'svelte'
   import { slide } from 'svelte/transition'
   import { supabase } from '$lib/supabase'
-  import { showNotification, COLOR_PALETTES } from '$lib/stores'
+  import { showNotification } from '$lib/stores'
   import type { Team, Journalist } from '$lib/types'
   import TeamMemberItem from '$components/TeamMemberItem.svelte'
+  import ColorPalette from '$components/ColorPalette.svelte'
   import TeamLogoUpload from '$components/TeamLogoUpload.svelte'
   import ShareToggle from '$components/ShareToggle.svelte'
+  import TeamLockToggle from '$components/TeamLockToggle.svelte'
 
   export let team: Team
   export let courseId: string
@@ -19,7 +21,17 @@
 
   let members: Journalist[] = []
   let loadingMembers = false
-  let selectedMemberForRemoval: string | null = null
+
+  // Inline leave/remove confirmation state
+  let leavingMemberName: string | null = null
+  let isLeaving = false
+
+  // Inline editor toggle confirmation state
+  let editorToggleMember: { name: string; willBeEditor: boolean } | null = null
+  let isTogglingEditor = false
+
+  $: primaryColor = team.primary_color || '5422b0'
+  $: secondaryColor = team.secondary_color || 'f0e6f7'
 
   $: if (expanded && members.length === 0) {
     loadMembers()
@@ -48,14 +60,25 @@
     dispatch('preview', { teamName: team.team_name })
   }
 
-  function selectMemberForRemoval(name: string) {
-    selectedMemberForRemoval = selectedMemberForRemoval === name ? null : name
+  // Remove member flow (for non-self removal)
+  function handleRemoveMember(event: CustomEvent<{ name: string }>) {
+    leavingMemberName = event.detail.name
   }
 
-  async function confirmRemoveMember() {
-    if (!selectedMemberForRemoval) return
+  // Start leave flow (when clicking X on a member)
+  function handleStartLeave(event: CustomEvent<{ name: string }>) {
+    leavingMemberName = event.detail.name
+  }
 
-    const memberToRemove = selectedMemberForRemoval
+  function handleCancelLeave() {
+    leavingMemberName = null
+  }
+
+  async function handleConfirmLeave(event: CustomEvent<{ name: string }>) {
+    if (isLeaving) return
+    
+    isLeaving = true
+    const memberName = event.detail.name
 
     try {
       const { error } = await supabase
@@ -66,7 +89,7 @@
           updated_at: new Date().toISOString()
         })
         .eq('course_id', courseId)
-        .eq('name', memberToRemove)
+        .eq('name', memberName)
 
       if (error) throw error
 
@@ -78,48 +101,76 @@
           .eq('team_name', team.team_name)
         dispatch('updated')
       } else {
-        showNotification('success', `Removed ${memberToRemove}`)
+        showNotification('success', `Removed ${memberName}`)
         await loadMembers()
       }
+      leavingMemberName = null
     } catch (error) {
       console.error('Remove member error:', error)
       showNotification('error', 'Failed to remove. Try again.')
     } finally {
-      selectedMemberForRemoval = null
+      isLeaving = false
     }
   }
 
-  function cancelRemoveMember() {
-    selectedMemberForRemoval = null
-  }
-
-  async function handleToggleEditor(event: CustomEvent<{ name: string; isEditor: boolean }>) {
-    const { name, isEditor } = event.detail
-
-    if (!isEditor) {
+  // Editor toggle flow
+  function handleStartEditorToggle(event: CustomEvent<{ name: string; willBeEditor: boolean }>) {
+    const { name, willBeEditor } = event.detail
+    
+    if (!willBeEditor) {
       const editorCount = members.filter(m => m.is_editor).length
       if (editorCount === 1) {
         showNotification('error', 'Teams must have at least one editor. Add another then try again.')
         return
       }
     }
+    
+    editorToggleMember = event.detail
+  }
+
+  function handleCancelEditorToggle() {
+    editorToggleMember = null
+  }
+
+  async function handleConfirmEditorToggle(event: CustomEvent<{ name: string; willBeEditor: boolean }>) {
+    if (isTogglingEditor) return
+    
+    const { name, willBeEditor } = event.detail
+
+    if (!willBeEditor) {
+      const editorCount = members.filter(m => m.is_editor).length
+      if (editorCount === 1) {
+        showNotification('error', 'Teams must have at least one editor. Add another then try again.')
+        editorToggleMember = null
+        return
+      }
+    }
+
+    isTogglingEditor = true
 
     try {
       const { error } = await supabase
         .from('journalists')
-        .update({ is_editor: isEditor, updated_at: new Date().toISOString() })
+        .update({ is_editor: willBeEditor, updated_at: new Date().toISOString() })
         .eq('course_id', courseId)
         .eq('name', name)
 
       if (error) throw error
+
       await loadMembers()
+      showNotification('success', willBeEditor ? 'Editor added.' : 'Editor removed.')
+      editorToggleMember = null
     } catch (error) {
-      console.error('Toggle editor error:', error)
+      console.error('Editor toggle error:', error)
       showNotification('error', 'Failed to update. Try again.')
+    } finally {
+      isTogglingEditor = false
     }
   }
 
-  async function handleColorSelect(primary: string, secondary: string) {
+  async function handleColorSelect(event: CustomEvent<{ primary: string; secondary: string }>) {
+    const { primary, secondary } = event.detail
+
     try {
       const { error } = await supabase
         .from('teams')
@@ -192,6 +243,24 @@
       showNotification('error', 'Failed to update sharing')
     }
   }
+
+  async function handleTeamLockToggle(event: CustomEvent<{ locked: boolean }>) {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .update({ team_lock: event.detail.locked, updated_at: new Date().toISOString() })
+        .eq('course_id', courseId)
+        .eq('team_name', team.team_name)
+
+      if (error) throw error
+
+      team = { ...team, team_lock: event.detail.locked }
+      showNotification('success', event.detail.locked ? 'Team locked' : 'Team unlocked')
+    } catch (error) {
+      console.error('Team lock toggle error:', error)
+      showNotification('error', 'Failed to update team lock')
+    }
+  }
 </script>
 
 <div class="mb-2">
@@ -229,15 +298,16 @@
   <!-- Expanded content -->
   {#if expanded}
     <div 
-      class="mt-3 px-2 space-y-4"
+      class="mt-3 px-2 space-y-6"
       transition:slide={{ duration: 200 }}
     >
-      <!-- Team Members -->
+      <!-- Team members Section -->
       <div>
-        <div class="flex items-center justify-between mb-3 pb-1 border-b border-[#efefef]">
-          <span class="text-sm text-[#777777]">Team Members</span>
+        <div class="flex items-center justify-between">
+          <span class="text-sm text-[#777777]">Team members</span>
           <span class="text-sm text-[#777777]">Editor</span>
         </div>
+        <div class="w-full border-b border-[#e0e0e0] mt-2"></div>
 
         {#if loadingMembers}
           <p class="text-[#999999] text-sm py-3">Loading...</p>
@@ -250,86 +320,44 @@
                 isCurrentUser={false}
                 canRemove={true}
                 canToggleEditor={true}
-                isSelected={selectedMemberForRemoval === member.name}
-                primaryColor={team.primary_color}
-                on:remove={() => selectMemberForRemoval(member.name)}
-                on:toggleEditor={handleToggleEditor}
+                {primaryColor}
+                {secondaryColor}
+                isConfirmingLeave={leavingMemberName === member.name}
+                {isLeaving}
+                isConfirmingEditorToggle={editorToggleMember?.name === member.name}
+                {isTogglingEditor}
+                on:remove={handleRemoveMember}
+                on:startLeave={handleStartLeave}
+                on:confirmLeave={handleConfirmLeave}
+                on:cancelLeave={handleCancelLeave}
+                on:startEditorToggle={handleStartEditorToggle}
+                on:confirmEditorToggle={handleConfirmEditorToggle}
+                on:cancelEditorToggle={handleCancelEditorToggle}
               />
             {/each}
           </div>
 
-          {#if selectedMemberForRemoval}
-            <div 
-              class="flex items-center justify-center gap-3 mt-3 py-2 px-4 rounded-full text-white"
-              style="background-color: #{team.primary_color};"
-            >
-              <button
-                type="button"
-                on:click={cancelRemoveMember}
-                class="w-6 h-6 rounded-full border border-white flex items-center justify-center"
-                aria-label="Cancel"
-              >
-                <img
-                  src="/icons/icon-close.svg"
-                  alt=""
-                  class="w-3 h-3"
-                  style="filter: invert(100%);"
-                />
-              </button>
-              <span class="text-sm font-medium">Remove from team?</span>
-              <button
-                type="button"
-                on:click={confirmRemoveMember}
-                class="w-6 h-6 rounded-full border border-white flex items-center justify-center"
-                aria-label="Confirm"
-              >
-                <img
-                  src="/icons/icon-check.svg"
-                  alt=""
-                  class="w-3 h-3"
-                  style="filter: invert(100%);"
-                />
-              </button>
-            </div>
-          {/if}
+          <!-- Explanation text below members list -->
+          <p class="text-xs text-[#999999] mt-3">
+            Teams must have at least one editor. To remove a member, tap X. When removed, all published stories will revert to drafts.
+          </p>
         {:else}
-          <p class="text-[#999999] text-sm py-3">No members</p>
+          <p class="text-center text-[#999999] text-sm py-6">No members</p>
         {/if}
       </div>
 
       <!-- Color Palette -->
-      <div class="pb-4">
-        <div class="flex items-baseline justify-between pb-2 mb-3 border-b border-[#ddd]">
-          <span class="text-sm text-[#777777]">Pick a team theme<span class="text-[#777777]">*</span></span>
-          <span class="text-xs text-[#777777]">*Editors only</span>
-        </div>
-        
-        <div class="flex gap-3">
-          {#each COLOR_PALETTES as palette}
-            <button
-              type="button"
-              on:click={() => handleColorSelect(palette.primary, palette.secondary)}
-              class="relative w-8 h-8 rounded-full transition-transform"
-              style="background-color: #{palette.primary};"
-              aria-label={palette.name}
-              title={palette.name}
-            >
-              {#if team.primary_color === palette.primary}
-                <span 
-                  class="absolute inset-[-4px] rounded-full border-2"
-                  style="border-color: #{palette.primary};"
-                ></span>
-              {/if}
-            </button>
-          {/each}
-        </div>
-      </div>
+      <ColorPalette
+        selectedColor={team.primary_color || '5422b0'}
+        disabled={false}
+        on:select={handleColorSelect}
+      />
 
       <!-- Logo Upload -->
       <TeamLogoUpload
         logoUrl={team.logo_url}
         disabled={false}
-        primaryColor={team.primary_color}
+        {primaryColor}
         on:upload={handleLogoUpload}
         on:remove={handleLogoRemove}
       />
@@ -339,8 +367,16 @@
         enabled={team.share_enabled}
         teamName={team.team_name}
         disabled={false}
-        primaryColor={team.primary_color}
+        {primaryColor}
         on:toggle={handleShareToggle}
+      />
+
+      <!-- Team Lock Toggle -->
+      <TeamLockToggle
+        locked={team.team_lock || false}
+        disabled={false}
+        {primaryColor}
+        on:toggle={handleTeamLockToggle}
       />
     </div>
   {/if}

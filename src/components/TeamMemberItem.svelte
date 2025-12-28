@@ -24,11 +24,7 @@
   }>()
 
   function handleRemoveClick() {
-    if (isCurrentUser) {
-      dispatch('startLeave', { name })
-    } else {
-      dispatch('remove', { name })
-    }
+    dispatch('startLeave', { name })
   }
 
   function handleConfirmLeave() {
@@ -126,7 +122,11 @@
           class="transition-opacity"
           class:opacity-50={isLeaving}
         >
-          {isLeaving ? 'Leaving...' : 'Leave team'}
+          {#if isLeaving}
+            {isCurrentUser ? 'Leaving...' : 'Removing...'}
+          {:else}
+            {isCurrentUser ? 'Leave team' : 'Remove'}
+          {/if}
         </button>
         <span class="mx-3 opacity-60">|</span>
         <button

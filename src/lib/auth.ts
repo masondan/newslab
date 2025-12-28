@@ -10,8 +10,8 @@ export type BylineResult =
   | { success: true; isReturning: boolean; teamName?: string }
   | { success: false; error: string }
 
-// Input validation constants
-const COURSE_ID_REGEX = /^[a-z0-9-]{3,20}$/
+// Input validation constants - allows uppercase for trainer IDs
+const COURSE_ID_REGEX = /^[a-zA-Z0-9-]{3,20}$/
 const BYLINE_REGEX = /^[a-zA-Z0-9\s'-]{1,30}$/
 
 // Hardwired fallback trainer ID - always works as backup entry
