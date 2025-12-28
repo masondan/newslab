@@ -23,7 +23,7 @@
   }
 </script>
 
-<div class="flex items-center py-3 border-b border-[#efefef] last:border-b-0">
+<div class="flex items-center py-3 border-b border-[#e0e0e0]">
   {#if canRemove}
     <button
       type="button"
