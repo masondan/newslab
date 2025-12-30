@@ -1131,8 +1131,10 @@
 
     <!-- Bottom Toolbar Wrapper - fixed above keyboard when visible -->
     <div 
-      class="toolbar-wrapper shrink-0 bg-white left-1/2 -translate-x-1/2 max-w-[480px] w-full"
+      class="toolbar-wrapper shrink-0 bg-white max-w-[480px] w-full"
       class:fixed={isKeyboardVisible}
+      class:left-1/2={isKeyboardVisible}
+      class:-translate-x-1/2={isKeyboardVisible}
       class:z-[60]={isKeyboardVisible}
       style={isKeyboardVisible ? `bottom: ${toolbarBottomPosition}px;` : ''}
     >
