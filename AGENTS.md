@@ -190,12 +190,12 @@ CREATE UNIQUE INDEX idx_teams_share_token ON teams(public_share_token) WHERE pub
 ```javascript
 export const COLOR_PALETTES = [
   { name: 'Indigo Bloom', primary: '5422b0', secondary: 'f0e6f7' },      // Default
-  { name: 'Stormy Teal', primary: '057373', secondary: 'd6ebdd' },
-  { name: 'Baltic Blue', primary: '00639c', secondary: 'dbeffa' },
-  { name: 'Royal Orchid', primary: '9100ae', secondary: 'f0cbf6' },
-  { name: 'Oxidized Iron', primary: 'b12e09', secondary: 'f6d4cb' },
-  { name: 'Brick Ember', primary: 'd60202', secondary: 'ffd6d6' },
-  { name: 'Charcoal', primary: '333333', secondary: '999999' }
+  { name: 'Black Forest', primary: '02441f', secondary: 'f3fde7' },
+  { name: 'Yale Blue', primary: '004269', secondary: 'e8f5fd' },
+  { name: 'Golden Earth', primary: '935D00', secondary: 'FFF8EB' },
+  { name: 'Molten Lava', primary: '801c00', secondary: 'ffedec' },
+  { name: 'Inferno', primary: 'ab0000', secondary: 'ffe4e4' },
+  { name: 'Graphite', primary: '333333', secondary: 'EFEFEF' }
 ] as const
 ```
 
