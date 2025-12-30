@@ -51,6 +51,10 @@
   const AUTOSAVE_DELAY = 3000
   const LOCK_REFRESH_INTERVAL = 60 * 1000 // Refresh lock every minute
 
+  // Keyboard detection for toolbar positioning
+  let keyboardHeight = 0
+  let isKeyboardVisible = false
+
   $: wordCount = countWords()
   $: canPublish = title.trim().length > 0 && !!$session?.teamName
   $: isEditingExisting = !!$editingStory.id
@@ -127,14 +131,38 @@
     }
   }
 
+  function handleViewportResize() {
+    if (!window.visualViewport) return
+    
+    const viewport = window.visualViewport
+    const windowHeight = window.innerHeight
+    const viewportHeight = viewport.height
+    
+    // Keyboard is visible when viewport height is significantly less than window height
+    const heightDiff = windowHeight - viewportHeight
+    isKeyboardVisible = heightDiff > 100
+    keyboardHeight = isKeyboardVisible ? heightDiff : 0
+  }
+
   onMount(() => {
     document.addEventListener('selectionchange', handleSelectionChange)
+    
+    // Set up visual viewport listener for keyboard detection
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportResize)
+      window.visualViewport.addEventListener('scroll', handleViewportResize)
+    }
   })
 
   onDestroy(() => {
     if (autoSaveTimer) clearTimeout(autoSaveTimer)
     clearLockRefreshTimer()
     document.removeEventListener('selectionchange', handleSelectionChange)
+    
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', handleViewportResize)
+      window.visualViewport.removeEventListener('scroll', handleViewportResize)
+    }
   })
 
   function handleSelectionChange() {
@@ -1041,7 +1069,10 @@
     </div>
 
     <!-- Content -->
-    <main class="flex-1 px-4 overflow-y-auto pb-4">
+    <main 
+      class="flex-1 px-4 overflow-y-auto pb-4"
+      style={isKeyboardVisible ? `padding-bottom: 80px;` : ''}
+    >
       <div class="space-y-1 pt-3">
         <!-- Featured Image -->
         {#if featuredImageUrl}
@@ -1087,52 +1118,59 @@
       {/if}
     </main>
 
-    <!-- Publish Toolbar (when active) -->
-    {#if showPublishToolbar}
-      <div class="px-4 pb-2" transition:fly={{ y: 20, duration: 150 }}>
-        <div class="flex items-center gap-3 rounded-full px-4 py-2 w-fit ml-auto" style="background-color: #{$teamColors.primary};">
-          <button
-            on:click={() => showPublishToolbar = false}
-            class="w-6 h-6 bg-white rounded-full flex items-center justify-center"
-            aria-label="Cancel"
-          >
-            <img src="/icons/icon-close.svg" alt="" class="w-3 h-3" style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);" />
-          </button>
-          <button
-            on:click={handlePublish}
-            disabled={!canPublish}
-            class="text-white font-medium disabled:opacity-50"
-          >
-            Publish Now?
-          </button>
+    <!-- Bottom Toolbar Wrapper - fixed above keyboard when visible -->
+    <div 
+      class="toolbar-wrapper shrink-0 bg-white left-1/2 -translate-x-1/2 max-w-[480px] w-full"
+      class:fixed={isKeyboardVisible}
+      class:z-[60]={isKeyboardVisible}
+      style={isKeyboardVisible ? `bottom: ${keyboardHeight}px;` : ''}
+    >
+      <!-- Publish Toolbar (when active) -->
+      {#if showPublishToolbar}
+        <div class="px-4 pb-2" transition:fly={{ y: 20, duration: 150 }}>
+          <div class="flex items-center gap-3 rounded-full px-4 py-2 w-fit ml-auto" style="background-color: #{$teamColors.primary};">
+            <button
+              on:click={() => showPublishToolbar = false}
+              class="w-6 h-6 bg-white rounded-full flex items-center justify-center"
+              aria-label="Cancel"
+            >
+              <img src="/icons/icon-close.svg" alt="" class="w-3 h-3" style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);" />
+            </button>
+            <button
+              on:click={handlePublish}
+              disabled={!canPublish}
+              class="text-white font-medium disabled:opacity-50"
+            >
+              Publish Now?
+            </button>
+          </div>
         </div>
-      </div>
-    {/if}
+      {/if}
 
-    <!-- Save Changes Toolbar (when active, for published stories) -->
-    {#if showSaveToolbar}
-      <div class="px-4 pb-2" transition:fly={{ y: 20, duration: 150 }}>
-        <div class="flex items-center gap-3 rounded-full px-4 py-2 w-fit ml-auto" style="background-color: #{$teamColors.primary};">
-          <button
-            on:click={() => showSaveToolbar = false}
-            class="w-6 h-6 bg-white rounded-full flex items-center justify-center"
-            aria-label="Cancel"
-          >
-            <img src="/icons/icon-close.svg" alt="" class="w-3 h-3" style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);" />
-          </button>
-          <button
-            on:click={handleSaveChanges}
-            disabled={!title.trim()}
-            class="text-white font-medium disabled:opacity-50"
-          >
-            Save Changes?
-          </button>
+      <!-- Save Changes Toolbar (when active, for published stories) -->
+      {#if showSaveToolbar}
+        <div class="px-4 pb-2" transition:fly={{ y: 20, duration: 150 }}>
+          <div class="flex items-center gap-3 rounded-full px-4 py-2 w-fit ml-auto" style="background-color: #{$teamColors.primary};">
+            <button
+              on:click={() => showSaveToolbar = false}
+              class="w-6 h-6 bg-white rounded-full flex items-center justify-center"
+              aria-label="Cancel"
+            >
+              <img src="/icons/icon-close.svg" alt="" class="w-3 h-3" style="filter: invert(14%) sepia(95%) saturate(3500%) hue-rotate(256deg) brightness(75%) contrast(90%);" />
+            </button>
+            <button
+              on:click={handleSaveChanges}
+              disabled={!title.trim()}
+              class="text-white font-medium disabled:opacity-50"
+            >
+              Save Changes?
+            </button>
+          </div>
         </div>
-      </div>
-    {/if}
+      {/if}
 
-    <!-- Toolbar -->
-    <footer class="border-t border-[#efefef] px-4 py-3 shrink-0 bg-white">
+      <!-- Toolbar -->
+      <footer class="border-t border-[#efefef] px-4 py-3 bg-white">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <button on:click={() => imageFileInput.click()} class="p-2" aria-label="Add image">
@@ -1263,7 +1301,8 @@
           {/if}
         </div>
       </div>
-    </footer>
+      </footer>
+    </div>
 
     <!-- Hidden file input for featured image -->
     <input
