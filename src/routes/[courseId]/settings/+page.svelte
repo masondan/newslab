@@ -1257,9 +1257,6 @@
         <div>
             <div class="flex items-center justify-between">
               <span class="text-sm text-[#777777]">Team members</span>
-              {#if currentUserIsEditor}
-                <span class="text-sm text-[#777777]">Editor</span>
-              {/if}
             </div>
             <div class="w-full border-b border-[#e0e0e0] mt-2"></div>
 
@@ -1294,7 +1291,7 @@
 
             <!-- Explanation text below members list -->
             {#if teamMembers.length > 0}
-              <p class="text-xs text-[#999999] mt-3">
+              <p class="text-sm text-[#999999] mt-3">
                 Teams must have at least one editor. To leave the team, tap X. When you leave, all published stories will revert to drafts.
               </p>
             {/if}
@@ -1365,7 +1362,7 @@
             >
               {deleteTeamConfirming ? 'Deleting...' : 'Delete the team'}
             </button>
-            <p class="text-xs text-[#999999] mt-2">
+            <p class="text-sm text-[#999999] mt-2">
               If you delete the team published stories will revert to author drafts
             </p>
           </div>

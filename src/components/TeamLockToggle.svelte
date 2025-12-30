@@ -36,5 +36,5 @@
     </button>
   </div>
 
-  <p class="text-xs text-[#999999]">This prevents others from joining your group.</p>
+  <p class="text-sm text-[#999999]">This prevents others from joining your group.</p>
 </div>
